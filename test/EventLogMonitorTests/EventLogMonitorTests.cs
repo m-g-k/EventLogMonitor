@@ -802,7 +802,8 @@ public class EventLogMonitorTests
     Assert.Equal(4, lines.Length);
     Assert.Equal("LogName : Entries : LastWriteTime : [DisplayName]", lines[0]);
     Assert.Equal("-------------------------------------------------", lines[1]);
-    Assert.EndsWith("ACE-11-Log.evtx : 64 : 30/12/2021 17:03:04 : [ACE-11-Log]", lines[2]);
+    Assert.Contains("ACE-11-Log.evtx : 64 : ", lines[2]);
+    Assert.EndsWith(" : [ACE-11-Log]", lines[2]);
     Assert.Equal("1 Provider file listed.", lines[3]);
   }
 
@@ -828,7 +829,7 @@ public class EventLogMonitorTests
     Assert.Equal("    FileSize:     69632", lines[3]);
     Assert.Equal("    IsFull:       False", lines[4]);
     Assert.StartsWith("    CreationTime:", lines[5]); // this varies if the file is moved
-    Assert.Equal("    LastWrite:    30/12/2021 17:03:04", lines[6]);
+    Assert.StartsWith("    LastWrite:", lines[6]);
     Assert.Equal("    OldestIndex:  1", lines[7]);
     Assert.Equal("1 Provider file listed.", lines[8]);
   }
