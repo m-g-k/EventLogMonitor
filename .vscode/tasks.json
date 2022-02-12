@@ -1,0 +1,191 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build - Debug",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/EventLogMonitor/EventLogMonitor.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "build - Release",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/EventLogMonitor/EventLogMonitor.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary",
+        "-c",
+        "Release"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": "build"
+    },
+    {
+      "label": "publish - Release as a single file WITH runtime",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "publish",
+        "${workspaceFolder}/src/EventLogMonitor/EventLogMonitor.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary",
+        "-c",
+        "Release",
+        "-r",
+        "win-x64",
+        "/p:PublishSingleFile=true",
+        "/p:IncludeNativeLibrariesForSelfExtract=true",
+        "--self-contained",
+        "true",
+        "-p:PublishReadyToRun=true"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "publish - Release as a single file WITHOUT runtime",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "publish",
+        "${workspaceFolder}/src/EventLogMonitor/EventLogMonitor.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary",
+        "-c",
+        "Release",
+        "-r",
+        "win-x64",
+        "/p:PublishSingleFile=true",
+        "/p:IncludeNativeLibrariesForSelfExtract=true",
+        "--self-contained",
+        "false",
+        "-p:PublishReadyToRun=true"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "clean - Debug",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "clean",
+        "${workspaceFolder}/src/EventLogMonitor/EventLogMonitor.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary",
+        "-c",
+        "Debug"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "clean - Release",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "clean",
+        "${workspaceFolder}/src/EventLogMonitor/EventLogMonitor.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary",
+        "-c",
+        "Release"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "watch - Debug Build",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "watch",
+        "build",
+        "--project",
+        "${workspaceFolder}/src/EventLogMonitor/EventLogMonitor.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "watch - Debug Tests",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "watch",
+        "test",
+        "--project",
+        "${workspaceFolder}/test/EventLogMonitorTests/EventLogMonitorTests.csproj",
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "run tests against Release build",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "test",
+        "-c",
+        "Release"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "run tests with code coverage",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "test",
+        "--collect:\"XPlat Code Coverage\"",
+        "--results-directory=./test/EventLogMonitorTests/TestResults/CoverageResults/"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "generate html code coverage report",
+      "command": "reportgenerator",
+      "type": "process",
+      "args": [
+        "-reports:\"./test/EventLogMonitorTests/TestResults/CoverageResults/*/coverage.cobertura.xml\"",
+        "-targetdir:\"test/EventLogMonitorTests/coveragereport\"",
+        "-historydir:\"test/EventLogMonitorTests/coveragereporthistory\"",
+        "-title:EventLogMonitor",
+        "-reporttypes:Html"
+      ],
+      "dependsOn": [
+        "run tests with code coverage"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "generate and view html code coverage report in default browser",
+      "command": "explorer",
+      "type": "process",
+      "args": [
+        "${workspaceFolder}\\test\\EventLogMonitorTests\\coveragereport\\index.html"
+      ],
+      "dependsOn": [
+        "generate html code coverage report"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "view most recent html code coverage report in default browser",
+      "command": "explorer",
+      "type": "process",
+      "args": [
+        "${workspaceFolder}\\test\\EventLogMonitorTests\\coveragereport\\index.html"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}
