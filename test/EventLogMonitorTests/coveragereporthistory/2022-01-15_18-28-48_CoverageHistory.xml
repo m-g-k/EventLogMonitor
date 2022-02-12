@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<coverage version="1.0" date="2022-01-15_18-28-48" tag="">
+  <assembly name="EventLogMonitor">
+    <class name="EventLogMonitor.BinaryDataFormatter" coveredlines="190" coverablelines="190" totallines="223" coveredbranches="96" totalbranches="98" />
+    <class name="EventLogMonitor.CultureSpecificMessage" coveredlines="65" coverablelines="78" totallines="163" coveredbranches="14" totalbranches="20" />
+    <class name="EventLogMonitor.EventLogMonitor" coveredlines="737" coverablelines="918" totallines="1215" coveredbranches="242" totalbranches="311" />
+    <class name="EventLogMonitor.SimpleArgumentProcessor" coveredlines="117" coverablelines="202" totallines="308" coveredbranches="39" totalbranches="84" />
+  </assembly>
+</coverage>

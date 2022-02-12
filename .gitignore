@@ -1,8 +1,6 @@
 *.txt
 **/obj/*
 **/bin/*
-test/**/coveragereport/*
-test/**/coveragereporthistory/*
 test/**/TestResults/*
 out/*
 *.zip
