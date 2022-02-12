@@ -13,6 +13,7 @@ No real installation is required - simply unzip the download and copy the **Even
 There are three different ways to use this tool. The first is to simply query all events from the Application Event Log like this:
 
 `EventLogMonitor.exe -s *`<br>
+
 this should give you the following output:<br>
 
 `Waiting for events from the Application log matching the event source '*'. `<br>
@@ -166,13 +167,13 @@ Each of these event types has the same format as shown in this picture taken fro
 ![Event Log message mormat](./images/EventLogExample.png)
 
 Of this list of six parts, the most frequently used are:
-1. Message body (or description).
-2. Further message details (or explanation).
-3. User action.
+1. **Message body** (or **Description**).
+2. **Further message details** (or **Explanation**).
+3. **User action**.
 
-Of course all three of these may include what the picture calls the "List of parameters". "Additional data" and "Standard cross-reference" are rarely seen and are included with the "User action" for our purposes.
+Of course all three of these may include what the picture calls the **List of parameters**. **Additional data** and **Standard cross-reference** are rarely seen and are included with the **User action** for our purposes.
 
-EventLogMonitor always uses the "List of parameters" as part of the message formatting if they are present in the event.
+EventLogMonitor always uses the **List of parameters** as part of the message formatting if they are present in the event.
 
 ## Controlling the output
 The output from EventLogMonitor is customisable to a certain extent.
@@ -204,6 +205,7 @@ Note that this filter is applied after any `-2` or `-3` option.
 Note that this filter is applied after any `-2` or `-3` option.
 ### "Filter on Warnings"
 `-fw` will output only those events that are either a "warning", an "error" or "critical", for example:<br>
+
 `EventLogMonitor.exe -p * -s <your source> -fw`<br>
 
 ### "Filter on Errors"
@@ -253,7 +255,7 @@ To view binary data as a hex dump instead of text, use the `-b2` option:<br>
 `00000036: 00 00 00 00             ....     00000000`<br>
 `Index: 311242`<br>
 
-Both binary options (`-b1` and `-b2`) also output the index value for the event which can be used to view more information about the event, for example by adding the `-3` or `-v` options in conjunction with the `-i` option. See the *[Using Event Indexes](#indexes)* section below for more details.
+Both binary options (`-b1` and `-b2`) also output the index value for the event which can be used to view more information about the event, for example by adding the `-3` or `-v` options in conjunction with the `-i` option. See the [Using Event Indexes](#indexes) section below for more details.
 
 All data written by the binary options is coloured in blue for easy identification.
 
@@ -310,38 +312,42 @@ When redirecting output to a file, you can still press `<Enter>`, `'Q'` or `<Esc
 
 ## Viewing output in a different language
 You can use the `-c <culture>` option to change the culture (or language) used to output the language. Any valid culture is allowed as long as the message catalogue for the event contains the message in the chosen language. Valid values for `-c` include:
-* De-DE
-* Es-ES
-* Fr-FR
-* It-IT
-* Ja-JP
-* Ko-KR
-* Pl-PL
-* Pt-BR
-* Ru-RU
-* Tr-TR
-* Zh-CN
-* Zh-TW
+* `De-DE`
+* `Es-ES`
+* `Fr-FR`
+* `It-IT`
+* `Ja-JP`
+* `Ko-KR`
+* `Pl-PL`
+* `Pt-BR`
+* `Ru-RU`
+* `Tr-TR`
+* `Zh-CN`
+* `Zh-TW`
 
 Note that you may need to use a Unicode font to be able to display certain languages in your terminal.
 
 ## Viewing events without message catalogues <a name="no-catalogue"></a>
 If the message catalogue for an event cannot be found, or the catalogue does not contain an entry for the event in question, a default message is output instead. Normally that message looks similar to the one output by the Event Viewer built into Windows in this situation:<br>
+
 <span style="color:green">**0I**</span>`: The description for Event ID 0 from source XYZ cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [25/01/2020 20:30:25.632]`<br>
 
 However, on occasion, when viewed in the Windows Event Viewer you will actually something like this instead:<br>
 
 `The operation completed successfully.`<br>
+
 for an event ID of 0.
 
 or this:
 
 `Incorrect function.`<br>
+
 for an event ID of 1.
 
 or even:
 
 `The system cannot find the path specified.`<br>
+
 for an event ID of 3.
 
 What is happening here is that if the Event Viewer detects that the event was written with a "qualifier" of zero (see [EventRecord.Qualifiers](https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.eventing.reader.eventrecord.qualifiers?view=dotnet-plat-ext-6.0#system-diagnostics-eventing-reader-eventrecord-qualifiers)) it tries to convert the event ID into a Win32 error message. If that convertion is sucessful then the Win32 error message that corresponds to the event ID is output instead of the default error message shown above. Whilst this approach means the event viewer output contains fewer error messages like the one above, it can be misleading in many cases as the Win32 message may not match the event. Therefore, EventLogMonitor chooses to always output the original error message instead which more acurately reflects the situation. However, if you also use the `-v` "verbose" option then you will see an extra entry on the verbose output line for the `Win32Msg` in this case:<br>
@@ -377,10 +383,13 @@ There are a final few options that have not been covered elsewhere. These are:
 
 ## Options list
 To see all the options, ask for help:<br>
+
 `EventLogMonitor -?`<br>
 
 Note that all the options also support a `/` as well as a `-`:<br>
+
 `EventLogMonitor /?`<br>
+
 ## IBM events
 If you run the tool without any options at all, you will see that the default is to look for entries from the various names for the **IBM App Connect Enterprise** product:<br>
 
@@ -390,7 +399,7 @@ If you run the tool without any options at all, you will see that the default is
 
 As you can see it looks for the most recent three names by which the product's event log entries have been known. One other small change the tool makes is when it outputs an entry that belongs to one of these products it will prefix the name with the letters `BIP` to match the products message naming convention.
 
-However, if you are not using this tool with any of these products, simply override these defaults with the `-s` flag as described above in the [usage](#usage) section.
+However, if you are not using this tool with any of these products, simply override these defaults with the `-s` flag as described above in the [Usage](#usage) section.
 
 ## License
 The source code files are made available under the Apache License, Version 2.0 (Apache-2.0), located in the [LICENSE](https://github.com/m-g-k/EventLogMonitor/blob/main/LICENSE) file.
