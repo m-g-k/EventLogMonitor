@@ -176,11 +176,11 @@ Of course all three of these may include what the picture calls the **List of pa
 EventLogMonitor always uses the **List of parameters** as part of the message formatting if they are present in the event.
 
 ## Controlling the output
-The output from EventLogMonitor is customisable to a certain extent.
+The output from EventLogMonitor is customisable to some extent.
 
-By default the tool tries to show one event per line. It does this by splitting the event into the three main sections shown above and only outputting the first, which is the "Message body".
+By default the tool tries to show one event per line. It does this by splitting the event into the three main sections shown above and only outputting the first, which is the **Message body**.
 
-There are three options which control the amount of information shown in the output which are are `-1`, `-2` and `-3`. The `-1` option is the default and will only show the "Message body". Specifying `-2` means that the output will include the "Message body" and the "Further details" section whereas specifying `-3` means all parts of the event will be shown including any "Additional data" or "Standard cross-reference" sections and provides the complete event information.
+There are three options which control the amount of information shown in the output which are are `-1`, `-2` and `-3`. The `-1` option is the default and will only show the **Message body**. Specifying `-2` means that the output will include the **Message body** and the **Further details** section whereas specifying `-3` means all parts of the event will be shown including any **Additional data** or **Standard cross-reference** sections and provides the complete event information.
 
 ## Filtering the output
 Some applications can produce a large amount of events in the Event Log and given that each application will normally use the same event source name you cannot use the `-s` source option to filter within a single event source and this is where the filter options come in. There are four filter options so far:
