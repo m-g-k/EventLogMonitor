@@ -1329,7 +1329,6 @@ public class EventLogMonitorTests
     Assert.Equal(3, lines.Length); // one extra closing test line is returned                               
     Assert.Equal("10005I: Machine restart is required. [16/01/2022 14:59:02.873]", lines[0].TrimEnd());
     Assert.StartsWith("Machine: mgk-PC3. Log: ", lines[1]);
-    //Assert.EndsWith("EventLogMonitor\\test\\EventLogMonitorTests\\SampleEventLogs\\RestartMgr-Log.evtx. Source: Microsoft-Windows-RestartManager. User: S-1-5-18. ProcessId: 44120. ThreadId: 40204.", lines[1]);
     // Avoid putting the repo name in the comparison in case it's a github ZIP download that ends with "-main"
     Assert.EndsWith("test\\EventLogMonitorTests\\SampleEventLogs\\RestartMgr-Log.evtx. Source: Microsoft-Windows-RestartManager. User: S-1-5-18. ProcessId: 44120. ThreadId: 40204.", lines[1]);    // tail
     Assert.StartsWith("1 Entries shown from the", lines[2]);
