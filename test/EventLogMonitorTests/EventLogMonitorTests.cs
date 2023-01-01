@@ -35,7 +35,8 @@ public class EventLogMonitorTests
   private readonly string vSSSampleEventLog;
   private readonly string restartManagerSampleEventLog;
   private readonly string securitySampleEventLog;
-   private readonly string invalidEventLogName;
+  private readonly string kernelPowerEventLogName;
+  private readonly string invalidEventLogName;
 
   public EventLogMonitorTests(ITestOutputHelper testOutputHelper)
   {
@@ -45,6 +46,7 @@ public class EventLogMonitorTests
     vSSSampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/VSS-Log.evtx";
     restartManagerSampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/RestartMgr-Log.evtx";
     securitySampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/Security-Log.evtx";
+    kernelPowerEventLogName = "../../../../../test/EventLogMonitorTests/SampleEventLogs/KernelPower-Log.evtx";
     invalidEventLogName = "../../../../../test/EventLogMonitorTests/SampleEventLogs/Invalid-Log.evtx";
   }
 
@@ -71,7 +73,7 @@ public class EventLogMonitorTests
     monitor.Initialize(args);
     string help = output.ToString();
     Assert.StartsWith("EventLogMonitor : Version", help);
-    Assert.EndsWith("When tailing the event log at the console, press <Enter>, 'Q' or <Esc> to exit.", help.TrimEnd());
+    Assert.EndsWith("Press 'S' for current statistics.", help.TrimEnd());
   }
 
   [Fact]
@@ -96,6 +98,20 @@ public class EventLogMonitorTests
     Console.SetOut(output);
 
     string[] args = new string[] { "-imvalidArg" };
+    EventLogMonitor monitor = new();
+    monitor.Initialize(args);
+    string help = output.ToString();
+    Assert.StartsWith("Invalid arguments or invalid argument combination.", help);
+  }
+
+  [Fact]
+  public void InvalidDuplicateArgumentWithValueGivesAnErrorMessage()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    string[] args = new string[] { "-imvalidArg", "-invalidArg" };
     EventLogMonitor monitor = new();
     monitor.Initialize(args);
     string help = output.ToString();
@@ -197,7 +213,6 @@ public class EventLogMonitorTests
     string logOut = output.ToString();
     stdoutput.WriteLine(logOut);
     Assert.StartsWith("Invalid arguments or invalid argument combination: only one of options '-1', '-2' and '-3' may be specified.", logOut);
-    Assert.EndsWith("When tailing the event log at the console, press <Enter>, 'Q' or <Esc> to exit.", logOut.TrimEnd());
   }
 
 
@@ -741,7 +756,7 @@ public class EventLogMonitorTests
   }
 
   [Fact]
-  public void OptionFilterIncludeAndExcludeInfoReturns2Entries()
+  public void OptionFilterIncludeAndWarnReturns2Entries()
   {
     // replace stdout to capture it
     var output = new StringWriter();
@@ -782,6 +797,285 @@ public class EventLogMonitorTests
     Assert.Single(lines);
     // tail
     Assert.StartsWith("0 Entries shown from the", lines[0]);
+  }
+
+  [Fact]
+  public void OptionFilterCriticalReturns5Entries()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    // force a culture specific search
+    string[] args = new string[] { "-p", "*", "-fc", "-c", "En-US", "-l", kernelPowerEventLogName };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(11, lines.Length);
+    //event 1
+    Assert.Equal("41C: The system has rebooted without cleanly shutting down first. This error could be caused if the system stopped responding, crashed, or lost power unexpectedly. [24/03/2022 12:35:05.0]", lines[0].TrimEnd());
+    //event 2
+    Assert.Equal("<Entry has no binary data>. Index: 69554", lines[1].TrimEnd());
+    // tail
+    Assert.StartsWith("5 Entries shown from the", lines[10]);
+  }
+
+  [Fact]
+  public void OptionFilterSingleIncludedIDsReturns2Entries()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    // we use the = form for arguments as well
+    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLog}", "-fn=2011" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(3, lines.Length);
+    //event 1
+    Assert.Equal("BIP2011W: ( MGK ) The IBM App Connect Enterprise service has been shutdown, process ID '7028'. [30/11/2021 22:49:47.66]", lines[0].TrimEnd());
+    //event 2
+    Assert.Equal("BIP2011W: ( MGK ) The IBM App Connect Enterprise service has been shutdown, process ID '7108'. [23/12/2021 11:57:04.661]", lines[1].TrimEnd());
+    // tail
+    Assert.StartsWith("2 Entries shown from the", lines[2]);
+  }
+
+  [Fact]
+  public void OptionFilterSingleExcludedIDsReturns54Entries()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    // we use the = form for arguments as well
+    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLog}", "-fn=-2155" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(55, lines.Length);
+    // output should not contain the excluded IDs
+    Assert.DoesNotContain("BIP2155", logOut);
+    //event 1
+    Assert.Equal("BIP2001I: ( MGK ) The IBM App Connect Enterprise service has started at version '110011'; process ID 7192. [18/11/2021 18:21:16.344]", lines[0].TrimEnd());
+    //event 54
+    Assert.Equal("BIP2154I: ( MGK.main ) Integration server finished with Configuration message. [23/12/2021 11:58:12.195]", lines[53].TrimEnd());
+    // tail
+    Assert.StartsWith("54 Entries shown from the", lines[54]);
+  }
+
+  [Fact]
+  public void OptionFilterIncludedRangeReturns25Entries()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    // we use the = form for arguments as well
+    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLog}", "-fn=2150-2160" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(26, lines.Length);
+    //event 1
+    Assert.Equal("BIP2152I: ( MGK.main ) Configuration message received. [18/11/2021 18:21:38.345]", lines[0].TrimEnd());
+    //event 25
+    Assert.Equal("BIP2154I: ( MGK.main ) Integration server finished with Configuration message. [23/12/2021 11:58:12.195]", lines[24].TrimEnd());
+    // tail
+    Assert.StartsWith("25 Entries shown from the", lines[25]);
+  }
+
+  [Fact]
+  public void OptionFilterExcludedRangeReturns39Entries()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    // we use the = form for arguments as well
+    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLog}", "-fn=-2150-2160" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(40, lines.Length);
+    // output should not contain the excluded IDs
+    Assert.DoesNotContain("BIP2150", logOut);
+    Assert.DoesNotContain("BIP2151", logOut);
+    Assert.DoesNotContain("BIP2152", logOut);
+    Assert.DoesNotContain("BIP2153", logOut);
+    Assert.DoesNotContain("BIP2154", logOut);
+    Assert.DoesNotContain("BIP2155", logOut);
+    Assert.DoesNotContain("BIP2156", logOut);
+    Assert.DoesNotContain("BIP2157", logOut);
+    Assert.DoesNotContain("BIP2158", logOut);
+    Assert.DoesNotContain("BIP2159", logOut);
+    Assert.DoesNotContain("BIP2160", logOut);
+    //event 1
+    Assert.Equal("BIP2001I: ( MGK ) The IBM App Connect Enterprise service has started at version '110011'; process ID 7192. [18/11/2021 18:21:16.344]", lines[0].TrimEnd());
+    //event 25
+    Assert.Equal("BIP2269I: ( MGK.main ) Deployed resource ''test'' (uuid=''test'',type=''MessageFlow'') started successfully. [23/12/2021 11:58:12.195]", lines[38].TrimEnd());
+    // tail
+    Assert.StartsWith("39 Entries shown from the", lines[39]);
+  }
+
+  [Fact]
+  public void OptionFilterMixedEventIdsReturns22Entries()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    // we use the = form for arguments as well
+    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLog}", "-fn=2150-2160,-2154-2155,2011,2001,-2152,3130-3140" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(23, lines.Length);
+    // output should not contain the excluded IDs
+    Assert.DoesNotContain("BIP2152", logOut);
+    Assert.DoesNotContain("BIP2154", logOut);
+    Assert.DoesNotContain("BIP2155", logOut);
+    //event 1
+    Assert.Equal("BIP2001I: ( MGK ) The IBM App Connect Enterprise service has started at version '110011'; process ID 7192. [18/11/2021 18:21:16.344]", lines[0].TrimEnd());
+    //event 25
+    Assert.Equal("BIP3132I: ( MGK.main ) The HTTP Listener has started listening on port '7800' for ''http'' connections. [23/12/2021 11:58:12.194]", lines[21].TrimEnd());
+    // tail
+    Assert.StartsWith("22 Entries shown from the", lines[22]);
+  }
+
+  [Fact]
+  public void OptionFilterIncludedRangeIDsReturns4Entries()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    // we use the '=' form for the fn arguments as well as a trailing bool argument to ensure '=' form does not have to be last
+    string[] args = new string[] { "-p=*", $"-l={securitySampleEventLog}", "-fn=0-10000", "-v" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(9, lines.Length);
+    //event 1
+    Assert.Equal("4957F: Windows Firewall did not apply the following rule: [05/02/2022 13:54:04.551]", lines[0].TrimEnd());
+    Assert.EndsWith("Source: Microsoft-Windows-Security-Auditing. ProcessId: 1052. ThreadId: 17632.", lines[1].TrimEnd());
+    //event 2
+    Assert.Equal("4662S: An operation was performed on an object. [05/02/2022 14:40:21.712]", lines[2].TrimEnd());
+    Assert.EndsWith("Source: Microsoft-Windows-Security-Auditing. ProcessId: 1052. ThreadId: 12488.", lines[3].TrimEnd());
+    //event 3
+    Assert.Equal("4662S: An operation was performed on an object. [05/02/2022 14:40:21.720]", lines[4].TrimEnd());
+    Assert.EndsWith("Source: Microsoft-Windows-Security-Auditing. ProcessId: 1052. ThreadId: 12488.", lines[5].TrimEnd());
+    //event 4
+    Assert.Equal("4957F: Windows Firewall did not apply the following rule: [06/02/2022 15:57:02.961]", lines[6].TrimEnd());
+    Assert.EndsWith("Source: Microsoft-Windows-Security-Auditing. ProcessId: 1052. ThreadId: 17632.", lines[7].TrimEnd());
+    // tail
+    Assert.StartsWith("4 Entries shown from the", lines[8]);
+  }
+
+  [Fact]
+  public void OptionFilterIncludedRangeIDsReturns4EntriesInAltCulture()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    // we use the '=' form for the fn arguments as well as a trailing bool argument to ensure '=' form does not have to be last
+    string[] args = new string[] { "-p=*", "-c=En-US", $"-l={securitySampleEventLog}", "-fn=0-10000", "-v" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(9, lines.Length);
+    //event 1
+    Assert.Equal("4957F: Windows Firewall did not apply the following rule: [05/02/2022 13:54:04.551]", lines[0].TrimEnd());
+    Assert.EndsWith("Source: Microsoft-Windows-Security-Auditing. ProcessId: 1052. ThreadId: 17632.", lines[1].TrimEnd());
+    //event 2
+    Assert.Equal("4662S: An operation was performed on an object. [05/02/2022 14:40:21.712]", lines[2].TrimEnd());
+    Assert.EndsWith("Source: Microsoft-Windows-Security-Auditing. ProcessId: 1052. ThreadId: 12488.", lines[3].TrimEnd());
+    //event 3
+    Assert.Equal("4662S: An operation was performed on an object. [05/02/2022 14:40:21.720]", lines[4].TrimEnd());
+    Assert.EndsWith("Source: Microsoft-Windows-Security-Auditing. ProcessId: 1052. ThreadId: 12488.", lines[5].TrimEnd());
+    //event 4
+    Assert.Equal("4957F: Windows Firewall did not apply the following rule: [06/02/2022 15:57:02.961]", lines[6].TrimEnd());
+    Assert.EndsWith("Source: Microsoft-Windows-Security-Auditing. ProcessId: 1052. ThreadId: 17632.", lines[7].TrimEnd());
+    // tail
+    Assert.StartsWith("4 Entries shown from the", lines[8]);
+  }
+
+  [Fact]
+  public void InvalidIDFilterGivesAnErrorMessage()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    string[] args = new string[] { "-fn", "imvalidFilter" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.False(initialized, $"{initialized} should be false");
+    string help = output.ToString();
+    Assert.StartsWith("Invalid arguments or invalid argument combination: Invalid -fn filter: Invalid Event ID filter: 'imvalidFilter'.", help);
+  }
+
+  [Fact]
+  public void InvalidIDInclusiveRangeFilterGivesAnErrorMessage()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    string[] args = new string[] { "-fn", "42-bad" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.False(initialized, $"{initialized} should be false");
+    string help = output.ToString();
+    Assert.StartsWith("Invalid arguments or invalid argument combination: Invalid -fn filter: Invalid inclusive range filter: '42-bad'.", help);
+  }
+
+  [Fact]
+  public void InvalidIDExclusiveRangeFilterGivesAnErrorMessage()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    string[] args = new string[] { "-fn=-43-56bad" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.False(initialized, $"{initialized} should be false");
+    string help = output.ToString();
+    Assert.StartsWith("Invalid arguments or invalid argument combination: Invalid -fn filter: Invalid exclusive range filter: '-43-56bad'.", help);
   }
 
   [Fact]
@@ -883,7 +1177,7 @@ public class EventLogMonitorTests
     Assert.Contains("Windows PowerShell", logOut);
   }
 
-    [Fact]
+  [Fact]
   public void OptionDWithSingleOptionLReturnsSingleEventLog()
   {
     // replace stdout to capture it
@@ -908,7 +1202,7 @@ public class EventLogMonitorTests
     Assert.Contains("Windows PowerShell", logOut);
   }
 
-    [Fact]
+  [Fact]
   public void OptionDShowsDetailsOfRealEventLogVerbose()
   {
     // replace stdout to capture it
@@ -1150,7 +1444,7 @@ public class EventLogMonitorTests
     Console.In.Close();
   }
 
-    [Fact]
+  [Fact]
   public void CliOptionEOSWillQuitTailing()
   {
     // replace stdout to capture it
@@ -1334,10 +1628,11 @@ public class EventLogMonitorTests
     Assert.StartsWith("1 Entries shown from the", lines[2]);
   }
 
-    [Fact]
-  public void SecurityLogReturnsAFAndASSuffixedEventIds()
+  [Fact]
+  public void SecurityLogReturns_F_And_S_SuffixedEventIds()
   {
     // The Security log should be formattable on any machine with En-US installed
+    // TODO we should make our own catalogue for these security events just incase of a none En-US machine...
 
     // replace stdout to capture it
     var output = new StringWriter();
@@ -1353,9 +1648,9 @@ public class EventLogMonitorTests
     string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
     Assert.Equal(5, lines.Length); // one extra closing test line is returned                               
     Assert.Equal("4957F: Windows Firewall did not apply the following rule: [05/02/2022 13:54:04.551]", lines[0].TrimEnd());
-    Assert.StartsWith("4662S: An operation was performed on an object. [05/02/2022 14:40:21.712]", lines[1]);
-    Assert.EndsWith("4662S: An operation was performed on an object. [05/02/2022 14:40:21.720]", lines[2]);
-    Assert.EndsWith("4957F: Windows Firewall did not apply the following rule: [06/02/2022 15:57:02.961]", lines[3]);
+    Assert.Equal("4662S: An operation was performed on an object. [05/02/2022 14:40:21.712]", lines[1].TrimEnd());
+    Assert.Equal("4662S: An operation was performed on an object. [05/02/2022 14:40:21.720]", lines[2].TrimEnd());
+    Assert.Equal("4957F: Windows Firewall did not apply the following rule: [06/02/2022 15:57:02.961]", lines[3].TrimEnd());
     // tail
     Assert.StartsWith("4 Entries shown from the", lines[4]);
   }

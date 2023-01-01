@@ -183,13 +183,14 @@ By default the tool tries to show one event per line. It does this by splitting 
 There are three options which control the amount of information shown in the output which are are `-1`, `-2` and `-3`. The `-1` option is the default and will only show the **Message body**. Specifying `-2` means that the output will include the **Message body** and the **Further details** section whereas specifying `-3` means all parts of the event will be shown including any **Additional data** or **Standard cross-reference** sections and provides the complete event information.
 
 ## Filtering the output
-Some applications can produce a large amount of events in the Event Log and given that each application will normally use the same event source name you cannot use the `-s` source option to filter within a single event source and this is where the filter options come in. There are four filter options so far:
+Some applications can produce a large amount of events in the Event Log and given that each application will normally use the same event source name you cannot use the `-s` source option to filter within a single event source and this is where the filter options come in. There are several filter options:
 
 * `-fi` or "filter include".
 * `-fx` or "filter exclude".
+* `-fn` or "filter on event ID".
 * `-fw` or "filter on warnings".
 * `-fe` or "filter on errors".
-* `-fn` or "filter on event number" (coming soon!).
+* `-fc` or "filter on critical errors".
 
 ### "Filter Include"
 `-fi` will output only those events that include the specified text in the message. Use quotes to include text that contains a space, for example:<br>
@@ -203,6 +204,29 @@ Note that this filter is applied after any `-2` or `-3` option.
 `EventLogMonitor.exe -p * -s <your source> -fx "your text to exclude here"`<br>
 
 Note that this filter is applied after any `-2` or `-3` option.
+
+### "Filter on Event ID" <a name="FilterOnEventId"></a>
+`-fn` will output only those events that match the specified event ID filter. Allowed filters include:
+* inclusive IDs like `55`, `1002`. This will display only events with a matching ID(s).
+* exclusive IDs like `-11`, `-20`. This will display only events that do not match the specified ID(s).
+* inclusive ranges like `100-200, 401-672`. This will display only events within the specified range(s).
+* exclusive ranges like `-50-60, -700-907`. This will display only events that are not within the specified range(s).
+* any combination of the above like `56,1003,100-200,-50-70,-89`
+
+For example:<br>
+
+`EventLogMonitor.exe -p * -s <your source> -fn 1,2,55-103,-60-70,-99`<br>
+
+Note that if you only want to specify a negative ID or range you should use the `=` form to supply the parameter like this: <br>
+
+`EventLogMonitor.exe -p * -s <your source> -fn=-99`<br>
+
+Also, if you use spaces between the commas, then you should supply the values in quotes like this:<br>
+
+`EventLogMonitor.exe -p * -s <your source> -fn "1, 2, 55 - 103, -60-70,-99"`<br>
+
+In order to mix inclusive value and exclusive values in the same filter you also need to specify an inclusive range within which the exclusive values can be excluded. In the example shown above, we can see the range `55-103` is an inclusive range from which the range `-60-90` and the individual ID `99` can be excluded.
+
 ### "Filter on Warnings"
 `-fw` will output only those events that are either a "warning", an "error" or "critical", for example:<br>
 
@@ -213,9 +237,25 @@ Note that this filter is applied after any `-2` or `-3` option.
 
 `EventLogMonitor.exe -p * -s <your source> -fe`<br>
 
-If necessary, the `-fi` and `-fe` options can be combined by specifying both options. If both are present, the `-fi` is always run first, then the `-fx` filter is run afterwards. If both `-fw` and `-fe` options are used, the `-fe` option takes precedence.
+### "Filter on Critical Errors"
+`-fc` will output only those events that are a "critical Error". These types of errors are usually output by Windows into the System log when something happens like the machine reboots after losing power, for example:<br>
 
-Note that when viewing previous events with the `-p` option, the `-fi` and `-fx` options are applied only to those events selected by the `-p`. This means that if you use `-p5` for example then the filter will only be applied to the last 5 events matching the specified `-s` source. Therefore, it is possible no events will be displayed if the filter does not match. To determine if any previous event matches your filter it necessary to use a much larger value for `-p` or even use `-p *` to filter against all previous events in the chosen log.
+`EventLogMonitor.exe -p * -l System -fc`<br>
+
+If necessary, the `-fi` and `-fx` options can be combined by specifying both options. If both are present, the `-fi` is always run first, then the `-fx` filter is run afterwards. 
+
+If more than one of `-fw`, `-fe` or `-fc` options are used together, then `-fc` takes precedence over `-fe` which takes precedence over `-fw`.
+
+Note that when viewing previous events with the `-p` option, the `-fi` and `-fx` options are applied only to those events selected by the `-p`. This means that if you use `-p 5` for example then the filter will only be applied to the last 5 events matching the specified `-s` source. Therefore, it is possible no events will be displayed if the filter does not match. To determine if any previous event matches your filter it may be necessary to use a much larger value for `-p` or even use `-p *` to filter against all previous events in the chosen log.
+
+### Filter Precedence
+If multiple different filters types are used together, the precedence is:
+1. `-fn` 
+2. `-fc`
+3. `-fe`
+4. `-fw`
+5. `-fi`
+6. `-fx`
 
 ## Binary data output
 Some events will include diagnostic binary data as part of the event. This will often be ASCII or Unicode text data but may also include pointers or a raw memory dump. To facilitate the viewing of this information, you can use the `-b1` flag to view any binary data contained with an event as ASCII or Unicode text:<br>
@@ -390,6 +430,17 @@ Note that all the options also support a `/` as well as a `-`:<br>
 
 `EventLogMonitor /?`<br>
 
+## Specifing arguments
+In most cases arguments can simply be supplied with a space between the flag and the argument. However, it is also possible to use `=` as a separator instead. This means that these two commands are the same:<br>
+
+`EventLogMonitor.exe -s SPP -p 2`<br>
+
+and<br>
+
+`EventLogMonitor.exe -s=SPP -p=2`<br>
+
+The `=` form is most useful when providing `exclusive` event ID filters, see [Filter on Event ID](#FilterOnEventId) for an example.
+
 ## IBM events
 If you run the tool without any options at all, you will see that the default is to look for entries from the various names for the **IBM App Connect Enterprise** product:<br>
 
@@ -397,7 +448,7 @@ If you run the tool without any options at all, you will see that the default is
 `Waiting for events from the Application log matching the event source 'IBM Integration' or 'WebSphere Broker' or 'IBM App Connect Enterprise'.`<br>
 `Press <Enter>, 'Q' or <Esc> to exit or press 'S' for current stats...`<br>
 
-As you can see it looks for the most recent three names by which the product's event log entries have been known. One other small change the tool makes is when it outputs an entry that belongs to one of these products it will prefix the name with the letters `BIP` to match the products message naming convention.
+As you can see it looks for the most recent three names by which the product's event log entries have been known. One other small change the tool makes is when it outputs an entry that belongs to one of these products it will prefix the event ID with the letters `BIP` to match the products message naming convention.
 
 However, if you are not using this tool with any of these products, simply override these defaults with the `-s` flag as described above in the [Usage](#usage) section.
 

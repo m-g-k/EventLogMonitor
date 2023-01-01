@@ -52,14 +52,16 @@ public class EventLogMonitor
     myArgs.SetOptionalFlaggedArgument("-l");
     myArgs.SetOptionalFlaggedArgument("-fi");
     myArgs.SetOptionalFlaggedArgument("-fx");
+    myArgs.SetOptionalFlaggedArgument("-fn");
     myArgs.SetOptionalBooleanArgument("-fw");
     myArgs.SetOptionalBooleanArgument("-fe");
+    myArgs.SetOptionalBooleanArgument("-fc");
 
     myArgs.SetOptionalBooleanArgument("-?"); // help
     myArgs.SetOptionalBooleanArgument("-help"); // help
     myArgs.SetOptionalBooleanArgument("-version"); // version
 
-    bool validArgs = myArgs.ValidateArguments();
+    bool validArgs = myArgs.ParseAndValidateArguments();
     if (!validArgs)
     {
       return InvalidArguments(null);
@@ -206,6 +208,29 @@ public class EventLogMonitor
     {
       iLogLevel = 2; // This level equates to error events (will also catch critical events)
     }
+
+    level = myArgs.GetBooleanArgument("-fc"); // filter to only show critical errors - overrides an fe amd fw
+    if (level)
+    {
+      iLogLevel = 1; // This level equates to critical error events only
+    }
+
+    // filter to show specific event IDs - must be after -fw, -fe and -fc to capture iLogLevel first
+    filter = myArgs.GetFlaggedArgument("-fn");
+    if (!String.IsNullOrEmpty(filter) || (iLogLevel != -1))
+    {
+      try
+      {
+        EventLogSimpleQueryGenerator queryGenerator = new(filter, iLogLevel);
+        iEntryEventIdAndLogLevelQuery = queryGenerator.QueryString;
+      }
+      catch (ArgumentException e)
+      {
+        // The error message should say what is wrong here
+        return InvalidArguments("Invalid -fn filter: " + e.Message);
+      }
+    }
+    
 
     string logName = myArgs.GetFlaggedArgument("-l");
     if (!string.IsNullOrEmpty(logName))
@@ -496,20 +521,7 @@ public class EventLogMonitor
       pathType = PathType.FilePath;
     }
 
-    string query = null; // no query by default
-    if (iLogLevel != -1)
-    {
-      // LogAlways = 0,
-      // Critical = 1,
-      // Error = 2,
-      // Warning = 3,
-      // Informational = 4,
-      // Verbose = 5
-      // Customer events = > 5
-      query = $"*[System/Level<={iLogLevel} and System/Level>0]";
-    }
-
-    iEventLogQuery = new EventLogQuery(iLogName, pathType, query)
+    iEventLogQuery = new EventLogQuery(iLogName, pathType, iEntryEventIdAndLogLevelQuery)
     {
       ReverseDirection = true //we want newest to oldest
     };
@@ -701,11 +713,14 @@ public class EventLogMonitor
     ConsoleColor textColour;
     if (entry.LogName == "Security")
     {
-      if( ((ulong)entry.Keywords ^ 0x8010000000000000) == 0x0) {
+      if (((ulong)entry.Keywords ^ 0x8010000000000000) == 0x0)
+      {
         type = "F"; textColour = ConsoleColor.Red; // Audit Failure
-      } else {
+      }
+      else
+      {
         type = "S"; textColour = ConsoleColor.Green; // Audit Success
-      } 
+      }
     }
     else
     {
@@ -731,7 +746,7 @@ public class EventLogMonitor
         // try to get the specific language version of the message.
         // however, this may not be available so the message may not be found
         CultureSpecificMessage.EventLogRecordWrapper wrapper = new(entry);
-        message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, iChosenCulture.LCID);
+        message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, iChosenCulture.LCID, iChosenCulture.Name);
 
         if (string.IsNullOrEmpty(message))
         {
@@ -750,7 +765,7 @@ public class EventLogMonitor
           // try to get the specific language version of the message.
           // however, this may not be available so the message may not be found
           CultureSpecificMessage.EventLogRecordWrapper wrapper = new(entry);
-          message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, iUSDefaultCulture.LCID);
+          message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, iUSDefaultCulture.LCID, iUSDefaultCulture.Name);
         }
       }
 
@@ -1127,6 +1142,7 @@ public class EventLogMonitor
   private string iDefaultCulture = "en-US";
   private string iEntryInclusiveFilter = "";
   private string iEntryExclusiveFilter = "";
+  private string iEntryEventIdAndLogLevelQuery = null; // query must be null to represent no query by default
   private bool iCultureSet = false;
   private bool iTimestampFirst = false;
   private uint iOriginalIndex = 0;
@@ -1144,19 +1160,25 @@ public class EventLogMonitor
   private static void DisplayHelp()
   {
     Console.WriteLine("EventLogMonitor : Version {0} : https://github.com/m-g-k/EventLogMonitor", GetProductVersion());
-    Console.WriteLine("Usage 1 : EventLogMonitor [-p <count>] [-1|-2|-3] [-s <src>] [-nt] [-v]");
-    Console.WriteLine("                          [-b1] [-b2] [-l <log>] [-c <culture>] [-tf]");
-    Console.WriteLine("                          [-fi <filt>] [-fx <filt>] [-fw | -fe]");
-    Console.WriteLine("Usage 2 : EventLogMonitor -i index [-v] [p <count>] [-c <culture>]");
-    Console.WriteLine("                          [-b1] [-b2] [-fi <filt>] [-fx <filt>] [-fw | -fe]");
-    Console.WriteLine("                          [-1|-2|-3] [-l <log>] [-tf]");
-    Console.WriteLine("Usage 3 : EventLogMonitor -d [-v] [-l <log>]");
-    Console.WriteLine("  e.g. EventLogMonitor -p 10 -2");
-    Console.WriteLine("  e.g. EventLogMonitor -i 115324 -b1");
-    Console.WriteLine("  e.g. EventLogMonitor -p 5 -s * -l System");
-    Console.WriteLine("  e.g. EventLogMonitor -p 10 -s \"Integration,MQ\" -b1 -2");
-    Console.WriteLine("  e.g. EventLogMonitor -p * -s \"Browser Agent\" -l c:\\temp\\mylog.evtx");
-    Console.WriteLine("  e.g. EventLogMonitor -i \"1127347-1127350\" -b1");
+    Console.WriteLine("Usage:");
+    Console.WriteLine("  Usage 1 : EventLogMonitor [-p <count>] [-1|-2|-3] [-s <src>] [-nt] [-v]");
+    Console.WriteLine("                            [-b1] [-b2] [-l <log>] [-c <culture>] [-tf]");
+    Console.WriteLine("                            [-fi <filt>] [-fx <filt>] [-fn <IDs>] [-fw|-fe|-fc]");
+    Console.WriteLine("  Usage 2 : EventLogMonitor -i index [-v] [p <count>] [-c <culture>]");
+    Console.WriteLine("                            [-b1] [-b2] [-fi <filt>] [-fx <filt>] [-fn <IDs>]");
+    Console.WriteLine("                            [-fw | -fe | -fc]");
+    Console.WriteLine("                            [-1|-2|-3] [-l <log>] [-tf]");
+    Console.WriteLine("  Usage 3 : EventLogMonitor -d [-v] [-l <log>]");
+    Console.WriteLine("Examples:");
+    Console.WriteLine("  EventLogMonitor -p * -s *");
+    Console.WriteLine("  EventLogMonitor -p 10 -2");
+    Console.WriteLine("  EventLogMonitor -i 115324 -b1");
+    Console.WriteLine("  EventLogMonitor -p 5 -s * -l System");
+    Console.WriteLine("  EventLogMonitor -p 10 -s \"Integration,MQ\" -b1 -2");
+    Console.WriteLine("  EventLogMonitor -p * -s \"Browser Agent\" -l c:\\temp\\mylog.evtx");
+    Console.WriteLine("  EventLogMonitor -i \"1127347-1127350\" -b1");
+    Console.WriteLine("  EventLogMonitor -s * -fn \"1, 2, 50-90, -55-60, -88\" -p 10");
+    Console.WriteLine("Options:");
     Console.WriteLine("  -p  show the last <count> entries from the event log for the given <source>.");
     Console.WriteLine("      Use a '*' for all event log entries.");
     Console.WriteLine("  -1  Minimal output (description only). This is the default output format.");
@@ -1164,7 +1186,7 @@ public class EventLogMonitor
     Console.WriteLine("  -3  Full output (description, explanation and user action).");
     Console.WriteLine("  -b1 Show any binary info as text followed by the index of the entry.");
     Console.WriteLine("  -b2 Show any binary info as a hex dump followed by the index of the entry.");
-    Console.WriteLine("  -nt Not tailing - tailing the event log is the default for usage 1.");
+    Console.WriteLine("  -nt No tailing - tailing the event log is the default for usage 1.");
     Console.WriteLine("  -tf Display the timestamp first rather than last for each entry shown.");
     Console.WriteLine("  -i  Display an entry with a specific index. Use -b1 to display indexes.");
     Console.WriteLine("      Display a range of events by specifying the start and end of the range.");
@@ -1187,11 +1209,19 @@ public class EventLogMonitor
     Console.WriteLine("      Specify -d [-v] -l \"app, Hyper\" to filter on a subset of logs.");
     Console.WriteLine("  -fi Specify -fi <filt> to only show entries that contain <filt>.");
     Console.WriteLine("  -fx Specify -fx <filt> to only show entries that do not contain <filt>.");
-    Console.WriteLine("  -fw Specify -fw to only show entries that are 'Warnings' or 'Errors'.");
-    Console.WriteLine("  -fe Specify -fe to only show entries that are 'Errors'.");
+    Console.WriteLine("  -fw Specify -fw to only show entries that are 'Warnings', 'Errors' or");
+    Console.WriteLine("      'Critical Errors'.");
+    Console.WriteLine("  -fe Specify -fe to only show entries that are 'Errors' or 'Critical Errors'.");
+    Console.WriteLine("  -fc Specify -fc to only show entries that are 'Critical Errors'.");
+    Console.WriteLine("  -fn Specify -fn <id_filter> to only show entries with the specified IDs.");
+    Console.WriteLine("      The ID filter supports included, excluded and ranges of event IDs. For");
+    Console.WriteLine("      details see: https://github.com/m-g-k/EventLogMonitor#filter-on-event-id");
     Console.WriteLine("  -version - displays the version of this tool.");
     Console.WriteLine("  -? or -help - displays this help.");
-    Console.WriteLine("When tailing the event log at the console, press <Enter>, 'Q' or <Esc> to exit.");
+    Console.WriteLine("Notes:");
+    Console.WriteLine("  When tailing the event log at the console:");
+    Console.WriteLine("    Press <Enter>, 'Q' or <Esc> to exit.");
+    Console.WriteLine("    Press 'S' for current statistics.");
   }
 
   private static void DisplayVersion()

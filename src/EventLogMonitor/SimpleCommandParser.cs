@@ -22,17 +22,15 @@ public class SimpleArgumentProcessor
 {
   public SimpleArgumentProcessor(string[] args)
   {
-    this.iTotalArguments = args.Length;
-    this.iRequiredUnFlaggedArgumentsCount = 0;
-    this.iOptionalUnFlaggedArgumentsCount = 0;
-    this.iTotalFlaggedArguments = 0;
-    this.iTotalBooleanArguments = 0;
-    this.iTotalInvalidArgumentCount = 0;
-
+    iArgs = args;
+    iTotalArguments = args.Length;
+  }
+  private void ParseArgs()
+  {
     string currentFlag = "";
     for (int i = 0; i < iTotalArguments; ++i)
     {
-      string currentArgument = args[i];
+      string currentArgument = iArgs[i];
       if (currentArgument.Length == 0)
       {
         continue; // skip an empty argument
@@ -41,33 +39,37 @@ public class SimpleArgumentProcessor
       iAllArguments.Add(currentArgument);
       if (currentArgument[0].Equals('-') || currentArgument[0].Equals('/'))
       {
-        // currentArgument = "-" + currentArgument.Substring(1); //force to be a '-'
         currentArgument = "-" + currentArgument[1..]; // force to be a '-'
 
-        // flagged
-        if (!(currentFlag.Length == 0))
+        if (currentArgument.Contains('='))
         {
-          // we have an empty flagged argument (boolean)
+          ParseFlagedArgWithEquals(currentArgument);
+          currentArgument = "";
+        }
+        else if (!(currentFlag.Length == 0))
+        {
+          // we have an empty flagged argument (probably boolean)
 
           // check it does not already exist
           if (iFlaggedArguments.ContainsKey(currentFlag))
           {
             ++iTotalInvalidArgumentCount; // duplicate argument(s) found. Error is noticed in validate call
+            ++iTotalBooleanArguments;
           }
           else
           {
             iFlaggedArguments.Add(currentFlag, "");
+            ++iTotalBooleanArguments;
           }
-
-          ++iTotalBooleanArguments;
         }
+
         currentFlag = currentArgument;
       }
       else
       {
-        // unflagged
         if (currentFlag.Length == 0)
         {
+          // unflagged
           iUnflaggedArguments.Add(currentArgument);
         }
         else
@@ -100,13 +102,31 @@ public class SimpleArgumentProcessor
       {
         ++iTotalInvalidArgumentCount; // duplicate argument(s) found. Error is noticed in validate call
       }
+      else if (currentFlag.Contains('='))
+      {
+        ParseFlagedArgWithEquals(currentFlag);
+      }
       else
       {
         iFlaggedArguments.Add(currentFlag, "");
+        ++iTotalBooleanArguments;
       }
-
-      ++iTotalBooleanArguments;
     }
+  }
+
+  private void ParseFlagedArgWithEquals(string currentArgument)
+  {
+    string[] range = currentArgument.Split('=', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    if (range.Length != 2)
+    {
+      // invalid range
+      ++iTotalInvalidArgumentCount;
+    }
+    else
+    {
+      iFlaggedArguments.Add(range[0], range[1]);
+    }
+    ++iTotalFlaggedArguments;
   }
 
   public List<string> GetAllArgs()
@@ -148,7 +168,7 @@ public class SimpleArgumentProcessor
     return match;
   }
 
-  // Note: a required argument needs a value, a boolean one does not (to be valid)
+  // Note: a flagged argument needs a value, a boolean one does not (to be valid)
   public void SetRequiredFlaggedArgument(string args) { iRequiredFlaggedArguments.Add(args); }
   public void SetOptionalFlaggedArgument(string args) { iOptionalFlaggedArguments.Add(args); }
   public void SetRequiredBooleanArgument(string args) { iRequiredBooleanArguments.Add(args); }
@@ -156,8 +176,11 @@ public class SimpleArgumentProcessor
   public void SetRequiredUnFlaggedArgumentCount(int count) { iRequiredUnFlaggedArgumentsCount = count; }
   public void SetOptionalUnFlaggedArgumentCount(int count) { iOptionalUnFlaggedArgumentsCount = count; }
 
-  public bool ValidateArguments(bool debug = false)
+  public bool ParseAndValidateArguments(bool debug = false)
   {
+    //first parse the args we have been given
+
+    ParseArgs();
     // validate the unflagged args next
     int totalUnflaggedArgs = iUnflaggedArguments.Count;
     int totalValidArguments = iRequiredUnFlaggedArgumentsCount + iOptionalUnFlaggedArgumentsCount;
@@ -170,95 +193,87 @@ public class SimpleArgumentProcessor
 
     // validate required flagged arguments. We work on a copy so we can erase as we find
     Dictionary<string, string> flaggedArgumentsCopy = new(iFlaggedArguments);
+    foreach (string current in iRequiredFlaggedArguments)
     {
-      foreach (string current in iRequiredFlaggedArguments)
+      if (!flaggedArgumentsCopy.ContainsKey(current))
       {
-        if (!flaggedArgumentsCopy.ContainsKey(current))
-        {
-          // not found
-          if (debug) { Console.WriteLine("Required argument '{0}' not found\n", current); }
-          return false;
-        }
-
-        string value = flaggedArgumentsCopy[current];
-        if (string.IsNullOrEmpty(value))
-        {
-          // expected value for flagged argument
-          if (debug) { Console.WriteLine("Required argument '{0}' has no value\n", current); }
-          return false;
-        }
-
-        flaggedArgumentsCopy.Remove(current);
+        // not found
+        if (debug) { Console.WriteLine("Required argument '{0}' not found\n", current); }
+        return false;
       }
+
+      string value = flaggedArgumentsCopy[current];
+      if (string.IsNullOrEmpty(value))
+      {
+        // expected value for flagged argument
+        if (debug) { Console.WriteLine("Required argument '{0}' has no value\n", current); }
+        return false;
+      }
+
+      flaggedArgumentsCopy.Remove(current);
     }
 
     // validate required boolean arguments
+    foreach (string current in iRequiredBooleanArguments)
     {
-      foreach (string current in iRequiredBooleanArguments)
+      if (!flaggedArgumentsCopy.ContainsKey(current))
       {
-        if (!flaggedArgumentsCopy.ContainsKey(current))
-        {
-          // not found
-          if (debug) { Console.WriteLine("Required boolean argument '{0}' not found\n", current); }
-          return false;
-        }
-
-        string value = flaggedArgumentsCopy[current];
-        if (!string.IsNullOrEmpty(value))
-        {
-          // unexpected value for boolean argument
-          if (debug) { Console.WriteLine("Required boolean argument '{0}' has an unexpected value '{1}'\n", current, value); }
-          return false;
-        }
-
-        flaggedArgumentsCopy.Remove(current);
+        // not found
+        if (debug) { Console.WriteLine("Required boolean argument '{0}' not found\n", current); }
+        return false;
       }
+
+      string value = flaggedArgumentsCopy[current];
+      if (!string.IsNullOrEmpty(value))
+      {
+        // unexpected value for boolean argument
+        if (debug) { Console.WriteLine("Required boolean argument '{0}' has an unexpected value '{1}'\n", current, value); }
+        return false;
+      }
+
+      flaggedArgumentsCopy.Remove(current);
     }
 
     // validate optional flagged arguments. 
+    foreach (string current in iOptionalFlaggedArguments)
     {
-      foreach (string current in iOptionalFlaggedArguments)
+      // erase if found and not empty
+      if (!flaggedArgumentsCopy.ContainsKey(current))
       {
-        // erase if found and not empty
-        if (!flaggedArgumentsCopy.ContainsKey(current))
-        {
-          // not found
-          continue;
-        }
-
-        string value = flaggedArgumentsCopy[current];
-        if (string.IsNullOrEmpty(value))
-        {
-          // expected value for flagged argument
-          if (debug) { Console.WriteLine("Optional argument '{0}' has no value\n", current); }
-          return false;
-        }
-
-        flaggedArgumentsCopy.Remove(current);
+        // not found
+        continue;
       }
+
+      string value = flaggedArgumentsCopy[current];
+      if (string.IsNullOrEmpty(value))
+      {
+        // expected value for flagged argument
+        if (debug) { Console.WriteLine("Optional argument '{0}' has no value\n", current); }
+        return false;
+      }
+
+      flaggedArgumentsCopy.Remove(current);
     }
 
     // validate optional boolean arguments.
+    foreach (string current in iOptionalBooleanArguments)
     {
-      foreach (string current in iOptionalBooleanArguments)
+      // erase if found and not empty
+      if (!flaggedArgumentsCopy.ContainsKey(current))
       {
-        // erase if found and not empty
-        if (!flaggedArgumentsCopy.ContainsKey(current))
-        {
-          // not found
-          continue;
-        }
-
-        string value = flaggedArgumentsCopy[current];
-        if (!string.IsNullOrEmpty(value))
-        {
-          // unexpected value for boolean argument
-          if (debug) { Console.WriteLine("Optional boolean argument '{0}' has an unexpected value '{1}'\n", current, value); }
-          return false;
-        }
-
-        flaggedArgumentsCopy.Remove(current);
+        // not found
+        continue;
       }
+
+      string value = flaggedArgumentsCopy[current];
+      if (!string.IsNullOrEmpty(value))
+      {
+        // unexpected value for boolean argument
+        if (debug) { Console.WriteLine("Optional boolean argument '{0}' has an unexpected value '{1}'\n", current, value); }
+        return false;
+      }
+
+      flaggedArgumentsCopy.Remove(current);
     }
 
     // see if we have any other arguments left over...
@@ -297,7 +312,11 @@ public class SimpleArgumentProcessor
     if (iTotalInvalidArgumentCount != 0)
     {
       // error - invalid arguments found (multiple flags with same name entered)
-      if (debug) { Console.WriteLine("Invalid arguments found, {0} flag(s) entered more than once.\n", iTotalInvalidArgumentCount); }
+      if (debug)
+      {
+        Console.WriteLine("Invalid arguments found, {0} flag(s) entered more than once.\n", iTotalInvalidArgumentCount);
+        Console.WriteLine("Total args: {0}. Flagged args: {1}. Boolean args: {2}. \n", iTotalArguments, iTotalFlaggedArguments, iTotalBooleanArguments);
+      }
       return false;
     }
 
@@ -306,19 +325,19 @@ public class SimpleArgumentProcessor
     return true;
   }
 
+  readonly private string[] iArgs;
   readonly private int iTotalArguments;
-  readonly private int iTotalFlaggedArguments;
-  readonly private int iTotalBooleanArguments;
-  readonly private int iTotalInvalidArgumentCount;
+  private int iTotalFlaggedArguments = 0;
+  private int iTotalBooleanArguments = 0;
+  private int iTotalInvalidArgumentCount = 0;
   readonly private List<string> iAllArguments = new();
   readonly private List<string> iUnflaggedArguments = new();
   readonly private Dictionary<string, string> iFlaggedArguments = new();
-
   readonly private List<string> iRequiredFlaggedArguments = new();
   readonly private List<string> iOptionalFlaggedArguments = new();
   readonly private List<string> iRequiredBooleanArguments = new();
   readonly private List<string> iOptionalBooleanArguments = new();
-  private int iRequiredUnFlaggedArgumentsCount;
-  private int iOptionalUnFlaggedArgumentsCount;
+  private int iRequiredUnFlaggedArgumentsCount = 0;
+  private int iOptionalUnFlaggedArgumentsCount = 0;
 
 }

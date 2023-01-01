@@ -140,6 +140,15 @@
       "problemMatcher": "$msCompile"
     },
     {
+      "label": "run tests against Debug build",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "test"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
       "label": "run tests with code coverage",
       "command": "dotnet",
       "type": "process",

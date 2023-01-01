@@ -52,8 +52,9 @@ public class CultureSpecificMessageTests
     mockEventRecord.Setup(x => x.Qualifiers).Returns(0);
     mockEventRecord.Setup(x => x.Properties).Returns(new List<EventProperty>());
     int enUSCulture = 1033;
+    string enUSCultureName = "En-US";
 
-    string message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture);
+    string message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture, enUSCultureName);
     stdoutput.WriteLine(message);
 
     Assert.Equal("The VSS service is shutting down due to idle timeout. %1 ", message); 
@@ -71,8 +72,9 @@ public class CultureSpecificMessageTests
     mockEventRecord.Setup(x => x.Qualifiers).Returns(0);
     mockEventRecord.Setup(x => x.Properties).Returns(new List<EventProperty>());
     int enUSCulture = 1033;
+    string enUSCultureName = "En-US";
 
-    string message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture);
+    string message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture, enUSCultureName);
     stdoutput.WriteLine(message);
 
     Assert.Empty(message); 
