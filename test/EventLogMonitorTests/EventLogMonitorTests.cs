@@ -22,6 +22,8 @@ using System.Diagnostics.CodeAnalysis;
 using Moq;
 using System.Diagnostics.Eventing.Reader;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Threading;
 
 namespace EventLogMonitor;
 
@@ -48,6 +50,10 @@ public class EventLogMonitorTests
     securitySampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/Security-Log.evtx";
     kernelPowerEventLogName = "../../../../../test/EventLogMonitorTests/SampleEventLogs/KernelPower-Log.evtx";
     invalidEventLogName = "../../../../../test/EventLogMonitorTests/SampleEventLogs/Invalid-Log.evtx";
+
+    // Several tests produce output that includes the expected date and time in UK format,
+    // so we must force UK style output even when the machine running the tests is not in this locale.
+    Thread.CurrentThread.CurrentCulture = new CultureInfo("En-GB");
   }
 
   [Fact]
