@@ -239,7 +239,7 @@ namespace EventLogMonitor
             int lastError = Marshal.GetLastWin32Error();
             if (lastError is 1815 or >= 15100 and <= 15108 or 317)
             {
-              // Code definitions nelow are from here: https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
+              // Code definitions below are from here: https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
 
               // Error code '1815' is "ERROR_RESOURCE_LANG_NOT_FOUND" which means:
               // "The specified resource language ID cannot be found in the image file."
