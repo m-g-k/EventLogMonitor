@@ -23,10 +23,20 @@ using System.IO;
 using System.Linq;
 using System.Security;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Reflection;
 
 namespace EventLogMonitor;
+
 public class EventLogMonitor
 {
+  [DllImport("Kernel32.dll", CharSet = CharSet.Auto)]
+  static extern System.UInt16 SetThreadLocale(System.UInt16 langId);
+
+  [DllImport("kernel32.dll")]
+  static extern uint GetThreadLocale();
+
   private static volatile int s_entriesDisplayed = 0;
   public EventLogMonitor()
   {
@@ -230,7 +240,7 @@ public class EventLogMonitor
         return InvalidArguments("Invalid -fn filter: " + e.Message);
       }
     }
-    
+
 
     string logName = myArgs.GetFlaggedArgument("-l");
     if (!string.IsNullOrEmpty(logName))
@@ -310,14 +320,28 @@ public class EventLogMonitor
 
     if (iCultureSet)
     {
+      bool isValidCulture;
       try
       {
         iChosenCulture = CultureInfo.CreateSpecificCulture(iDefaultCulture);
+        if (iChosenCulture.LCID == 127)
+        {
+          isValidCulture = false; // 127 is invarient culture which is no use to us
+        }
+        else
+        {
+          isValidCulture = true;
+        }
       }
       catch (ArgumentException)
       {
-        // in .NET 4.0, this can throw a CultureNotFoundException, a subclass of ArgumentException!
-        Console.WriteLine("Culture is not supported. " + iDefaultCulture + " is an invalid culture identifier. Defaulting to 'En-US'.");
+        // in .NET 4.0, CreateSpecificCulture can throw a CultureNotFoundException, a subclass of ArgumentException!
+        isValidCulture = false;
+      }
+
+      if (!isValidCulture)
+      {
+        Console.WriteLine("Culture is not supported. '" + iDefaultCulture + "' is an invalid culture identifier. Defaulting to 'En-US'.");
         iChosenCulture = iUSDefaultCulture;
       }
     }
@@ -751,6 +775,7 @@ public class EventLogMonitor
         if (string.IsNullOrEmpty(message))
         {
           // try again with the console default culture instead
+          SetThreadLocale((ushort)iChosenCulture.LCID);
           message = entry.FormatDescription();
         }
 
@@ -770,9 +795,13 @@ public class EventLogMonitor
       }
 
     }
-    catch (EventLogException)
+    catch (EventLogException e)
     {
+      // get the internal exception code as 1168 means we probably have an invalid MTA file
+      // TODO check and use code
+      // int exceptionCode = e.GetFieldValue<int>("_errorCode");
       // Console.WriteLine(e.ToString());  
+      win32Message = e.Message; // used if there are no qualifiers on the message ID
     }
 
     // see if we still have nothing!
@@ -801,7 +830,14 @@ public class EventLogMonitor
         message += "\r\n";
       }
 
-      message += "The message resource is present but the message was not found in the message table";
+      if (win32Message.Length > 0)
+      {
+        message += win32Message;
+      }
+      else
+      {
+        message += "The message resource is present but the message was not found in the message table";
+      }
 
       if (entry.Qualifiers == 0)
       {
@@ -989,6 +1025,7 @@ public class EventLogMonitor
 
   static void Main(string[] args)
   {
+    // Force output encoding to UTF-8
     Console.OutputEncoding = System.Text.Encoding.UTF8;
 
     // create and execute the monitoring object
@@ -1376,6 +1413,16 @@ public class EventLogMonitor
     public Exception EventException;
   }
 
+}
 
+public static class ReflectionExtensions
+{
+  public static T GetFieldValue<T>(this object o, string fieldName)
+  {
+    // Make sure both private and public fields from will be found
+    BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+    FieldInfo field = o.GetType().GetField(fieldName, flags);
+    return field != null ? (T)field?.GetValue(o) : default;
+  }
 }
 

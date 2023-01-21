@@ -24,6 +24,7 @@ using System.Diagnostics.Eventing.Reader;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace EventLogMonitor;
 
@@ -40,20 +41,23 @@ public class EventLogMonitorTests
   private readonly string kernelPowerEventLogName;
   private readonly string invalidEventLogName;
 
+  [DllImport("Kernel32.dll", CharSet = CharSet.Auto)]
+  static extern System.UInt16 SetThreadLocale(System.UInt16 langId);
+
   public EventLogMonitorTests(ITestOutputHelper testOutputHelper)
   {
     stdoutput = testOutputHelper;
     ace11SampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/ACE-11-Log.evtx";
     powerShellSampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/POSH-Log.evtx";
     vSSSampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/VSS-Log.evtx";
-    restartManagerSampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/RestartMgr-Log.evtx";
+    restartManagerSampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/RestartManager-Log.evtx";
     securitySampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/Security-Log.evtx";
     kernelPowerEventLogName = "../../../../../test/EventLogMonitorTests/SampleEventLogs/KernelPower-Log.evtx";
     invalidEventLogName = "../../../../../test/EventLogMonitorTests/SampleEventLogs/Invalid-Log.evtx";
 
-    // Several tests produce output that includes the expected date and time in UK format,
+    // Several tests produce output that includes the expected date and time in UK (En-GB - LCID 2057) format,
     // so we must force UK style output even when the machine running the tests is not in this locale.
-    Thread.CurrentThread.CurrentCulture = new CultureInfo("En-GB");
+    Thread.CurrentThread.CurrentCulture = new CultureInfo("En-GB", false);
   }
 
   [Fact]
@@ -374,7 +378,7 @@ public class EventLogMonitorTests
     string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
     Assert.Equal(2, lines.Length); // one extra closing test line is returned
                                    // most recent 2 entries
-    Assert.Equal("Culture is not supported. fake is an invalid culture identifier. Defaulting to 'En-US'.", lines[0].TrimEnd());
+    Assert.Equal("Culture is not supported. 'fake' is an invalid culture identifier. Defaulting to 'En-US'.", lines[0].TrimEnd());
     Assert.StartsWith("0 Entries shown from the", lines[1]);
   }
 
@@ -393,11 +397,12 @@ public class EventLogMonitorTests
     string logOut = output.ToString();
     stdoutput.WriteLine(logOut);
     string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-    Assert.Equal(3, lines.Length); // one extra closing test line is returned
-                                   // most recent 2 entries
-    Assert.Equal("BIP2269I: ( MGK.main ) Deployed resource ''test'' (uuid=''test'',type=''MessageFlow'') started successfully. [23/12/2021 11:58:12.195]", lines[0]);
-    Assert.Equal("BIP2154I: ( MGK.main ) Integration server finished with Configuration message. [23/12/2021 11:58:12.195]", lines[1]);
-    Assert.StartsWith("2 Entries shown from the", lines[2]);
+    Assert.Equal(4, lines.Length); // one extra closing test line is returned
+                                   // most recent 2 entries  
+    Assert.Equal("Culture is not supported. 'ABC' is an invalid culture identifier. Defaulting to 'En-US'.", lines[0].TrimEnd());
+    Assert.Equal("BIP2269I: ( MGK.main ) Deployed resource ''test'' (uuid=''test'',type=''MessageFlow'') started successfully. [23/12/2021 11:58:12.195]", lines[1]);
+    Assert.Equal("BIP2154I: ( MGK.main ) Integration server finished with Configuration message. [23/12/2021 11:58:12.195]", lines[2]);
+    Assert.StartsWith("2 Entries shown from the", lines[3]);
   }
 
   [Fact]
@@ -1586,8 +1591,13 @@ public class EventLogMonitorTests
   [Fact]
   public void InvalidLogReturnsErrorWhenUsed()
   {
-    // The "Invalid-Log" log has a valid message from the VSS service in it but the FormatMessage API can't parse it and we produce an error
-
+    // The "Invalid-Log" log has a valid message from the VSS service in it but the FormatMessage API can't parse it
+    // on an En-GB locale machine as the LocalMetadata MTA file is present for En-GB but does not have the message present in it.
+    // Therefore, we are using En-GB as the LocalMetadata MTA file for En-GB has no data. This causes an exception and we produce
+    // an error which we are looking for in this test. 
+    // However, we need to force the thread locale to En-GB for this to happen or on a different locale machine, e,g En-US this
+    // will return the actual message which we don't want here and this test will fail.
+    SetThreadLocale((ushort)CultureInfo.CurrentCulture.LCID); // it will be 2057 which is En-GB as set in the constructor
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1604,7 +1614,7 @@ public class EventLogMonitorTests
     Assert.Equal("8224I: The description for Event ID 8224 from source VSS cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer.", lines[0].TrimEnd());
     Assert.Equal("If the event originated on another computer, the display information had to be saved with the event.", lines[1]);
     Assert.Equal("The following information was included with the event:", lines[2].TrimEnd());
-    Assert.Equal("The message resource is present but the message was not found in the message table [21/12/2021 21:49:36.851]", lines[3].TrimEnd());
+    Assert.Equal("Element not found. [21/12/2021 21:49:36.851]", lines[3].TrimEnd());
     // tail
     Assert.StartsWith("1 Entries shown from the", lines[4]);
   }
@@ -1630,7 +1640,7 @@ public class EventLogMonitorTests
     Assert.Equal("10005I: Machine restart is required. [16/01/2022 14:59:02.873]", lines[0].TrimEnd());
     Assert.StartsWith("Machine: mgk-PC3. Log: ", lines[1]);
     // Avoid putting the repo name in the comparison in case it's a github ZIP download that ends with "-main"
-    Assert.EndsWith("test\\EventLogMonitorTests\\SampleEventLogs\\RestartMgr-Log.evtx. Source: Microsoft-Windows-RestartManager. User: S-1-5-18. ProcessId: 44120. ThreadId: 40204.", lines[1]);    // tail
+    Assert.EndsWith("test\\EventLogMonitorTests\\SampleEventLogs\\RestartManager-Log.evtx. Source: Microsoft-Windows-RestartManager. User: S-1-5-18. ProcessId: 44120. ThreadId: 40204.", lines[1]);    // tail
     Assert.StartsWith("1 Entries shown from the", lines[2]);
   }
 

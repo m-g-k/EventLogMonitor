@@ -4,3 +4,6 @@
 test/**/TestResults/*
 out/*
 *.zip
+.vs/*
+src/EventLogMonitor/Properties/launchSettings.json
+*.pdf

@@ -19,13 +19,23 @@
       //"args": ["-p", "*", "-nt", "-s", "*", "-fn", "-10-20"],
       //"args": ["-fn", "invalid"],
       //"args": ["-fc", "-l", "System", "-p", "1", "-c", "En-US"],
-      "args": ["-p", "*", "-l", "${workspaceFolder}\\test\\EventLogMonitorTests\\SampleEventLogs\\Security-Log.evtx", "-c", "De-DE"],
+      // "args": ["-p", "*", "-l", "${workspaceFolder}\\test\\EventLogMonitorTests\\SampleEventLogs\\Security-Log.evtx", "-c", "De-DE"],
+      "args": ["-p", "*", "-l", "${workspaceFolder}\\test\\EventLogMonitorTests\\SampleEventLogs\\Invalid-Log.evtx"],
+      //"args": ["-i", "717916", "-v"],
+      //"args": ["-p", "*", "-l", "${workspaceFolder}\\test\\EventLogMonitorTests\\SampleEventLogs\\ACE-11-Log.evtx", "-c", "De-DE"],
+      //"args": ["-p", "2", "-nt"],
       //"args": ["-p", "*", "-l", "${workspaceFolder}\\test\\EventLogMonitorTests\\SampleEventLogs\\Security-Log.evtx", "-fe"],
       // "args":["-p", "*", "-3", "-l", "Application", "-fi", "Windows Firewall did not apply the following rule", "-c", "En-US"],
       "cwd": "${workspaceFolder}",
       // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
       "console": "internalConsole",
-      "stopAtEntry": false
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "symbolOptions": {
+        "searchPaths": [],
+        "searchMicrosoftSymbolServer": true,
+        "searchNuGetOrgSymbolServer": true
+      }
     },
     {
       "name": ".NET Core Attach",

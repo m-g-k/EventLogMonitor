@@ -114,7 +114,7 @@ namespace EventLogMonitor
           {
             // fake the result as this is an attempt to get the reg info for a security log file and it will always fail here if not elevated
             // however, we can make a best guess at what it should be and for a file we don't want to require elevation for this case...
-            catalogueLocation = Environment.GetFolderPath(Environment.SpecialFolder.System) + "\\adtschema.dll";
+            catalogueLocation = Environment.GetFolderPath(Environment.SpecialFolder.System) + "\\adtschema.dll"; // adtschema.dll contains the entries for the security log
           }
         }
 
