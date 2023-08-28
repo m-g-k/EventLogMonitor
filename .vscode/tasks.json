@@ -177,9 +177,10 @@
     },
     {
       "label": "generate and view html code coverage report in default browser",
-      "command": "explorer",
-      "type": "process",
+      "command": "start",
+      "type": "shell",
       "args": [
+        "explorer",
         "${workspaceFolder}\\test\\EventLogMonitorTests\\coveragereport\\index.html"
       ],
       "dependsOn": [
@@ -189,9 +190,10 @@
     },
     {
       "label": "view most recent html code coverage report in default browser",
-      "command": "explorer",
-      "type": "process",
+      "command": "start",
+      "type": "shell",
       "args": [
+        "explorer",
         "${workspaceFolder}\\test\\EventLogMonitorTests\\coveragereport\\index.html"
       ],
       "problemMatcher": []

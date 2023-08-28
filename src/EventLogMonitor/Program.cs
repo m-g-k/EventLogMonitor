@@ -799,8 +799,9 @@ public class EventLogMonitor
     {
       // get the internal exception code as 1168 means we probably have an invalid MTA file
       // TODO check and use code
-      // int exceptionCode = e.GetFieldValue<int>("_errorCode");
-      // Console.WriteLine(e.ToString());  
+      int exceptionCode = e.GetFieldValue<int>("_errorCode");
+      //Console.WriteLine($"EXCEPTION CODE: {exceptionCode}"); // debug
+      //Console.WriteLine(e.ToString());  // debug
       win32Message = e.Message; // used if there are no qualifiers on the message ID
     }
 
@@ -1415,11 +1416,12 @@ public class EventLogMonitor
 
 }
 
+
 public static class ReflectionExtensions
 {
   public static T GetFieldValue<T>(this object o, string fieldName)
   {
-    // Make sure both private and public fields from will be found
+    // Make sure both private and public fields will be found
     BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     FieldInfo field = o.GetType().GetField(fieldName, flags);
     return field != null ? (T)field?.GetValue(o) : default;

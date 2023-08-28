@@ -57,7 +57,7 @@ public class EventLogMonitorTests
 
     // Several tests produce output that includes the expected date and time in UK (En-GB - LCID 2057) format,
     // so we must force UK style output even when the machine running the tests is not in this locale.
-    Thread.CurrentThread.CurrentCulture = new CultureInfo("En-GB", false);
+    Thread.CurrentThread.CurrentCulture = new CultureInfo("En-GB", true);
   }
 
   [Fact]
@@ -1259,7 +1259,7 @@ public class EventLogMonitorTests
     var mockEventRecord = new Mock<EventRecord>();
     mockEventRecord.Setup(x => x.Id).Returns(42);
     mockEventRecord.Setup(x => x.LogName).Returns("Applicationz");
-    var mockQuery = new Mock<EventLogQuery>("Application", PathType.LogName, null);
+    var mockQuery = new Mock<EventLogQuery>("Application", PathType.LogName);
     var mockReader = new Mock<TestEventLogReader>(mockQuery.Object);
 
     mockReader.Setup(x => x.ReadEvent()).Returns(mockEventRecord.Object);
@@ -1282,7 +1282,7 @@ public class EventLogMonitorTests
     mockEventRecord.Setup(x => x.ProviderName).Returns("WebSphere Broker");
     mockEventRecord.Setup(x => x.Properties).Returns(new List<EventProperty>());
     mockEventRecord.Setup(x => x.TimeCreated).Returns(new DateTime(2000, 1, 1, 12, 0, 0));
-    var mockQuery = new Mock<EventLogQuery>("Application", PathType.LogName, null);
+    var mockQuery = new Mock<EventLogQuery>("Application", PathType.LogName);
     var mockWatch = new Mock<TestEventLogWatcher>(mockQuery.Object);
 
     string[] monitorArgs = new string[] { "-nt" };
