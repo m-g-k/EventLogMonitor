@@ -26,16 +26,17 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace EventLogMonitor;
 
 public class EventLogMonitor
 {
   [DllImport("Kernel32.dll", CharSet = CharSet.Auto)]
-  static extern System.UInt16 SetThreadLocale(System.UInt16 langId);
+  static extern ushort SetThreadLocale(ushort langId);
 
   [DllImport("kernel32.dll")]
-  static extern uint GetThreadLocale();
+  static extern ushort GetThreadLocale();
 
   private static volatile int s_entriesDisplayed = 0;
   public EventLogMonitor()
@@ -127,7 +128,7 @@ public class EventLogMonitor
           iOriginalIndex = iRecordIndexMin;
 
           // set up the indexes to output a range of events. 
-          // they may not all exist but we try to incude them
+          // they may not all exist but we try to include them
           iRecordIndexRange = iRecordIndexMax - iRecordIndexMin + 1;
 
           if (iPreviousRecordCount < iRecordIndexRange)
@@ -774,9 +775,17 @@ public class EventLogMonitor
 
         if (string.IsNullOrEmpty(message))
         {
-          // try again with the console default culture instead
-          SetThreadLocale((ushort)iChosenCulture.LCID);
-          message = entry.FormatDescription();
+          // try again with the console default culture instead - but must reset
+          ushort origLCID = (ushort)GetThreadLocale();
+          try
+          {
+            SetThreadLocale((ushort)iChosenCulture.LCID);
+            message = entry.FormatDescription();
+          }
+          finally
+          {
+            SetThreadLocale(origLCID);
+          }
         }
 
       }
@@ -791,6 +800,23 @@ public class EventLogMonitor
           // however, this may not be available so the message may not be found
           CultureSpecificMessage.EventLogRecordWrapper wrapper = new(entry);
           message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, iUSDefaultCulture.LCID, iUSDefaultCulture.Name);
+        }
+
+        // try one last time, forcing thread to US
+        if (string.IsNullOrEmpty(message))
+        {
+          // try again with the console default culture instead - but must reset
+          ushort origLCID = (ushort)GetThreadLocale();
+          try
+          {
+            SetThreadLocale((ushort)iUSDefaultCulture.LCID); // force US
+            // Console.WriteLine("ORIG LCID " + origLCID);
+            message = entry.FormatDescription();
+          }
+          finally
+          {
+            SetThreadLocale(origLCID);
+          }
         }
       }
 
@@ -1028,6 +1054,9 @@ public class EventLogMonitor
   {
     // Force output encoding to UTF-8
     Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+    //var currentLocale = GetThreadLocale();
+    //Console.WriteLine("CURRENT LOCALE: " + currentLocale);
 
     // create and execute the monitoring object
     EventLogMonitor monitor = new();
@@ -1417,6 +1446,7 @@ public class EventLogMonitor
 }
 
 
+//[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)]
 public static class ReflectionExtensions
 {
   public static T GetFieldValue<T>(this object o, string fieldName)

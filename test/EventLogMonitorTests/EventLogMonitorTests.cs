@@ -33,27 +33,80 @@ public class EventLogMonitorTests
 {
   [SuppressMessage("Microsoft.Usage", "IDE0052:RemoveUnreadPrivateMember", MessageId = "stdoutput")]
   private readonly ITestOutputHelper stdoutput;
-  private readonly string ace11SampleEventLog;
-  private readonly string powerShellSampleEventLog;
-  private readonly string vSSSampleEventLog;
-  private readonly string restartManagerSampleEventLog;
-  private readonly string securitySampleEventLog;
-  private readonly string kernelPowerEventLogName;
-  private readonly string invalidEventLogName;
 
   [DllImport("Kernel32.dll", CharSet = CharSet.Auto)]
   static extern System.UInt16 SetThreadLocale(System.UInt16 langId);
 
+  [DllImport("kernel32.dll")]
+  static extern uint GetThreadLocale();
+
+  class Ace11SampleEventLogLocationData : TheoryData<string>
+  {
+    public Ace11SampleEventLogLocationData()
+    {
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/ACE-11-Log.evtx");
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/ACE-11-Log.evtx");
+    }
+  }
+
+  class PowerShellSampleEventLogLocationData : TheoryData<string>
+  {
+    public PowerShellSampleEventLogLocationData()
+    {
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/POSH-Log.evtx");
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/POSH-Log.evtx");
+    }
+  }
+
+  class VSSSampleEventLogLocationData : TheoryData<string>
+  {
+    public VSSSampleEventLogLocationData()
+    {
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/VSS-Log.evtx");
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/VSS-Log.evtx");
+    }
+  }
+
+  class RestartManagerSampleEventLogLocationData : TheoryData<string>
+  {
+    public RestartManagerSampleEventLogLocationData()
+    {
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/RestartManager-Log.evtx");
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/RestartManager-Log.evtx");
+    }
+  }
+
+  class SecuritySampleEventLogLocationData : TheoryData<string>
+  {
+    public SecuritySampleEventLogLocationData()
+    {
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/Security-Log.evtx");
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/Security-Log.evtx");
+    }
+  }
+
+  class KernelPowerEventLogLocationData : TheoryData<string>
+  {
+    public KernelPowerEventLogLocationData()
+    {
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/KernelPower-Log.evtx");
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/KernelPower-Log.evtx");
+    }
+  }
+
+  class InvalidEventLogLocationData : TheoryData<string>
+  {
+    public InvalidEventLogLocationData()
+    {
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/Invalid-Log.evtx");
+      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/Invalid-Log.evtx");
+    }
+  }
+
   public EventLogMonitorTests(ITestOutputHelper testOutputHelper)
   {
+    // set up to capture stdout
     stdoutput = testOutputHelper;
-    ace11SampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/ACE-11-Log.evtx";
-    powerShellSampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/POSH-Log.evtx";
-    vSSSampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/VSS-Log.evtx";
-    restartManagerSampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/RestartManager-Log.evtx";
-    securitySampleEventLog = "../../../../../test/EventLogMonitorTests/SampleEventLogs/Security-Log.evtx";
-    kernelPowerEventLogName = "../../../../../test/EventLogMonitorTests/SampleEventLogs/KernelPower-Log.evtx";
-    invalidEventLogName = "../../../../../test/EventLogMonitorTests/SampleEventLogs/Invalid-Log.evtx";
 
     // Several tests produce output that includes the expected date and time in UK (En-GB - LCID 2057) format,
     // so we must force UK style output even when the machine running the tests is not in this locale.
@@ -129,15 +182,15 @@ public class EventLogMonitorTests
   }
 
   [Theory]
-  [InlineData("")]
-  [InlineData("-1")] // -1 is the default output type if not present or overridden with -2 or -3
-  public void OptionP2ReturnsTwoMostRecentPreviousEvents(string extraOptions)
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionP2ReturnsTwoMostRecentPreviousEventsByDefault1(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
+    string extraOptions = ""; // make sure empty options ignored
 
-    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLog, extraOptions };
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, extraOptions };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -152,14 +205,39 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[2]);
   }
 
-  [Fact]
-  public void OptionP2ReturnsTwoMostRecentPreviousEventsWithMediumOutput()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionP2ReturnsTwoMostRecentPreviousEventsByDefault2(string ace11SampleEventLogLocation)
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+    string extraOptions = "-1"; // -1 is the default output type if not present or overridden with -2 or -3
+
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, extraOptions };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(3, lines.Length); // one extra closing test line is returned
+                                   // most recent 2 entries
+    Assert.Equal("BIP2269I: ( MGK.main ) Deployed resource ''test'' (uuid=''test'',type=''MessageFlow'') started successfully. [23/12/2021 11:58:12.195]", lines[0]);
+    Assert.Equal("BIP2154I: ( MGK.main ) Integration server finished with Configuration message. [23/12/2021 11:58:12.195]", lines[1]);
+    Assert.StartsWith("2 Entries shown from the", lines[2]);
+  }
+
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionP2ReturnsTwoMostRecentPreviousEventsWithMediumOutput(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLog, "-2" };
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, "-2" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -179,14 +257,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[4]);
   }
 
-  [Fact]
-  public void OptionP2ReturnsTwoMostRecentPreviousEventsWithFullOutput()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionP2ReturnsTwoMostRecentPreviousEventsWithFullOutput(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLog, "-3" };
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, "-3" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -208,14 +287,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[6]);
   }
 
-  [Fact]
-  public void UsingMoreThanOneOutputTypeReturnsAnError()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void UsingMoreThanOneOutputTypeReturnsAnError(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLog, "-3", "-2" };
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, "-3", "-2" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.False(initialized, $"{initialized} should be false");
@@ -226,14 +306,15 @@ public class EventLogMonitorTests
   }
 
 
-  [Fact]
-  public void OptionP2WithTFReturnsTwoMostRecentPreviousEventsWithTimestampFirst()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionP2WithTFReturnsTwoMostRecentPreviousEventsWithTimestampFirst(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLog, "-tf" };
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, "-tf" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -248,14 +329,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[2]);
   }
 
-  [Fact]
-  public void OptionP2ReturnsTwoMostRecentPreviousEventsWithBinaryDataAsUnicode()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionP2ReturnsTwoMostRecentPreviousEventsWithBinaryDataAsUnicode(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLog, "-b1" };
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, "-b1" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -275,14 +357,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[4]);
   }
 
-  [Fact]
-  public void OptionP2ReturnsTwoMostRecentPreviousEventsWithBinaryDataAsHex()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionP2ReturnsTwoMostRecentPreviousEventsWithBinaryDataAsHex(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLog, "-b2" };
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, "-b2" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -310,14 +393,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[75]);
   }
 
-  [Fact]
-  public void OptionP2ReturnsTwoMostRecentPreviousEventsWithExtraVerboseOutput()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionP2ReturnsTwoMostRecentPreviousEventsWithExtraVerboseOutput(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLog, "-v" };
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, "-v" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -339,14 +423,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[4]);
   }
 
-  [Fact]
-  public void OptionP2ReturnsTwoMostRecentPreviousEventsInGerman()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionP2ReturnsTwoMostRecentPreviousEventsInGerman(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLog, "-c", "de" };
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, "-c", "de" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -361,14 +446,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[2]);
   }
 
-  [Fact]
-  public void OptionInvalidCultureReturnsError()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionInvalidCultureReturnsError(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-l", ace11SampleEventLog, "-c", "fake" };
+    string[] args = new string[] { "-l", ace11SampleEventLogLocation, "-c", "fake" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -382,14 +468,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("0 Entries shown from the", lines[1]);
   }
 
-  [Fact]
-  public void OptionP2ReturnsTwoMostRecentPreviousEventsInEnglishWithInvalidCulture()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionP2ReturnsTwoMostRecentPreviousEventsInEnglishWithInvalidCulture(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLog, "-c", "ABC" };
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, "-c", "ABC" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -405,14 +492,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[3]);
   }
 
-  [Fact]
-  public void OptionPStarReturnsAll64PreviousEvents()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionPStarReturnsAll64PreviousEvents(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "*", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-p", "*", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -430,14 +518,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("64 Entries shown from the", lines[64]);
   }
 
-  [Fact]
-  public void OptionIndexReturnsSingleEvent()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionIndexReturnsSingleEvent(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-i", "282229", "-b1", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-i", "282229", "-b1", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -452,14 +541,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("Matching entry found in the", lines[2]);
   }
 
-  [Fact]
-  public void OptionIndexRangeReturnsThreeEventsInclusive()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionIndexRangeReturnsThreeEventsInclusive(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-i", "282229-282259", "-b1", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-i", "282229-282259", "-b1", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -482,14 +572,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("Found 3 Matching entries found in the", lines[6]);
   }
 
-  [Fact]
-  public void OptionIndexWithOptionP3WithSparseIndexReturnsThreeEventsAfterIndex()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionIndexWithOptionP3WithSparseIndexReturnsThreeEventsAfterIndex(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-i", "240568", "-p", "3", "-b1", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-i", "240568", "-p", "3", "-b1", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -511,14 +602,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("Found 3 Matching entries found in the", lines[6]);
   }
 
-  [Fact]
-  public void OptionIndexWithSmallIndexAndLargerPValueReturnsCorrectIndexInError()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionIndexWithSmallIndexAndLargerPValueReturnsCorrectIndexInError(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-i", "5", "-p", "6", "-b1", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-i", "5", "-p", "6", "-b1", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -531,14 +623,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("No entries found with matching index 5 in the", lines[0]);
   }
 
-  [Fact]
-  public void OptionIndexWithOptionP3ReturnsThreeEventsEitherSideOfTheIndex()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionIndexWithOptionP3ReturnsThreeEventsEitherSideOfTheIndex(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-i", "240584", "-p", "3", "-b1", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-i", "240584", "-p", "3", "-b1", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -572,14 +665,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("Found 7 Matching entries found in the", lines[14]);
   }
 
-  [Fact]
-  public void OptionIndexWithOptionPStarReturnsLast8Events()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionIndexWithOptionPStarReturnsLast8Events(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-i", "282271", "-p", "*", "-b1", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-i", "282271", "-p", "*", "-b1", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -598,14 +692,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("Found 8 Matching entries found in the", lines[16]);
   }
 
-  [Fact]
-  public void InvalidIndexRangeReturnsError()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void InvalidIndexRangeReturnsError(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-i", "282-229-345", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-i", "282-229-345", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.False(initialized, $"{initialized} should be false");
@@ -615,14 +710,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("Invalid arguments or invalid argument combination: invalid range, use 'x-y' to specify a range.", logOut);
   }
 
-  [Fact]
-  public void UsingAnIndexWithOptionSIsAnError()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void UsingAnIndexWithOptionSIsAnError(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-i", "229-282", "-s", "newSource", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-i", "229-282", "-s", "newSource", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.False(initialized, $"{initialized} should be false");
@@ -632,14 +728,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("Invalid arguments or invalid argument combination: -s not allowed with -i.", logOut);
   }
 
-  [Fact]
-  public void InvalidIndexRangeEndLessThanStartReturnsError()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void InvalidIndexRangeEndLessThanStartReturnsError(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-i", "282271-282270", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-i", "282271-282270", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.False(initialized, $"{initialized} should be false");
@@ -649,14 +746,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("Invalid arguments or invalid argument combination: index max > index min.", logOut);
   }
 
-  [Fact]
-  public void IndexHigherThanHigestEntryInLogIsOKReturnsNoEvents()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void IndexHigherThanHigestEntryInLogIsOKReturnsNoEvents(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-i", "282280", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-i", "282280", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -670,14 +768,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("No entries found with matching index 282280 in the", lines[0]);
   }
 
-  [Fact]
-  public void OptionFilterIncludeReturns5EventsInEnglish()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionFilterIncludeReturns5EventsInEnglish(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "*", "-fi", "Listening", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-p", "*", "-fi", "Listening", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -694,14 +793,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("5 Entries shown from the", lines[5]);
   }
 
-  [Fact]
-  public void OptionFilterIncludeReturns5EventsInGerman()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionFilterIncludeReturns5EventsInGerman(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "*", "-fi", "empfangsbereit", "-c", "De-DE", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-p", "*", "-fi", "empfangsbereit", "-c", "De-DE", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -718,14 +818,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("5 Entries shown from the", lines[5]);
   }
 
-  [Fact]
-  public void OptionFilterIncludeReturns4Entries()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionFilterIncludeReturns4Entries(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "*", "-fi", "shutdown", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-p", "*", "-fi", "shutdown", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -742,14 +843,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("4 Entries shown from the", lines[4]);
   }
 
-  [Fact]
-  public void OptionFilterIncludeAndExcludeReturns2Entries()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionFilterIncludeAndExcludeReturns2Entries(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "*", "-fi", "shutdown", "-fx", "immediate", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-p", "*", "-fi", "shutdown", "-fx", "immediate", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -766,14 +868,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[2]);
   }
 
-  [Fact]
-  public void OptionFilterIncludeAndWarnReturns2Entries()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionFilterIncludeAndWarnReturns2Entries(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "*", "-fi", "shutdown", "-fw", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-p", "*", "-fi", "shutdown", "-fw", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -790,14 +893,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[2]);
   }
 
-  [Fact]
-  public void OptionFilterErrorOnlyReturns0Entries()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionFilterErrorOnlyReturns0Entries(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "*", "-fe", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-p", "*", "-fe", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -810,15 +914,16 @@ public class EventLogMonitorTests
     Assert.StartsWith("0 Entries shown from the", lines[0]);
   }
 
-  [Fact]
-  public void OptionFilterCriticalReturns5Entries()
+  [Theory]
+  [ClassData(typeof(KernelPowerEventLogLocationData))]
+  public void OptionFilterCriticalReturns5Entries(string kernelPowerSampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
     // force a culture specific search
-    string[] args = new string[] { "-p", "*", "-fc", "-c", "En-US", "-l", kernelPowerEventLogName };
+    string[] args = new string[] { "-p", "*", "-fc", "-c", "En-US", "-l", kernelPowerSampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -835,15 +940,16 @@ public class EventLogMonitorTests
     Assert.StartsWith("5 Entries shown from the", lines[10]);
   }
 
-  [Fact]
-  public void OptionFilterSingleIncludedIDsReturns2Entries()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionFilterSingleIncludedIDsReturns2Entries(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
     // we use the = form for arguments as well
-    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLog}", "-fn=2011" };
+    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLogLocation}", "-fn=2011" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -860,15 +966,16 @@ public class EventLogMonitorTests
     Assert.StartsWith("2 Entries shown from the", lines[2]);
   }
 
-  [Fact]
-  public void OptionFilterSingleExcludedIDsReturns54Entries()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionFilterSingleExcludedIDsReturns54Entries(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
     // we use the = form for arguments as well
-    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLog}", "-fn=-2155" };
+    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLogLocation}", "-fn=-2155" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -887,15 +994,16 @@ public class EventLogMonitorTests
     Assert.StartsWith("54 Entries shown from the", lines[54]);
   }
 
-  [Fact]
-  public void OptionFilterIncludedRangeReturns25Entries()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionFilterIncludedRangeReturns25Entries(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
     // we use the = form for arguments as well
-    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLog}", "-fn=2150-2160" };
+    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLogLocation}", "-fn=2150-2160" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -912,15 +1020,16 @@ public class EventLogMonitorTests
     Assert.StartsWith("25 Entries shown from the", lines[25]);
   }
 
-  [Fact]
-  public void OptionFilterExcludedRangeReturns39Entries()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionFilterExcludedRangeReturns39Entries(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
     // we use the = form for arguments as well
-    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLog}", "-fn=-2150-2160" };
+    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLogLocation}", "-fn=-2150-2160" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -949,15 +1058,16 @@ public class EventLogMonitorTests
     Assert.StartsWith("39 Entries shown from the", lines[39]);
   }
 
-  [Fact]
-  public void OptionFilterMixedEventIdsReturns22Entries()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionFilterMixedEventIdsReturns22Entries(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
     // we use the = form for arguments as well
-    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLog}", "-fn=2150-2160,-2154-2155,2011,2001,-2152,3130-3140" };
+    string[] args = new string[] { "-p=*", $"-l={ace11SampleEventLogLocation}", "-fn=2150-2160,-2154-2155,2011,2001,-2152,3130-3140" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -978,15 +1088,16 @@ public class EventLogMonitorTests
     Assert.StartsWith("22 Entries shown from the", lines[22]);
   }
 
-  [Fact]
-  public void OptionFilterIncludedRangeIDsReturns4Entries()
+  [Theory]
+  [ClassData(typeof(SecuritySampleEventLogLocationData))]
+  public void OptionFilterIncludedRangeIDsReturns4Entries(string securitySampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
     // we use the '=' form for the fn arguments as well as a trailing bool argument to ensure '=' form does not have to be last
-    string[] args = new string[] { "-p=*", $"-l={securitySampleEventLog}", "-fn=0-10000", "-v" };
+    string[] args = new string[] { "-p=*", $"-l={securitySampleEventLogLocation}", "-fn=0-10000", "-v" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -1011,15 +1122,16 @@ public class EventLogMonitorTests
     Assert.StartsWith("4 Entries shown from the", lines[8]);
   }
 
-  [Fact]
-  public void OptionFilterIncludedRangeIDsReturns4EntriesInAltCulture()
+  [Theory]
+  [ClassData(typeof(SecuritySampleEventLogLocationData))]
+  public void OptionFilterIncludedRangeIDsReturns4EntriesInAltCulture(string securitySampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
     // we use the '=' form for the fn arguments as well as a trailing bool argument to ensure '=' form does not have to be last
-    string[] args = new string[] { "-p=*", "-c=En-US", $"-l={securitySampleEventLog}", "-fn=0-10000", "-v" };
+    string[] args = new string[] { "-p=*", "-c=En-US", $"-l={securitySampleEventLogLocation}", "-fn=0-10000", "-v" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -1089,14 +1201,15 @@ public class EventLogMonitorTests
     Assert.StartsWith("Invalid arguments or invalid argument combination: Invalid -fn filter: Invalid exclusive range filter: '-43-56bad'.", help);
   }
 
-  [Fact]
-  public void OptionDShowsDetailsOfEventLogFile()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionDShowsDetailsOfEventLogFile(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-d", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-d", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -1112,14 +1225,15 @@ public class EventLogMonitorTests
     Assert.Equal("1 Provider file listed.", lines[3]);
   }
 
-  [Fact]
-  public void OptionDShowsDetailsOfEventLogFileVerbose()
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionDShowsDetailsOfEventLogFileVerbose(string ace11SampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-d", "-v", "-l", ace11SampleEventLog };
+    string[] args = new string[] { "-d", "-v", "-l", ace11SampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -1340,13 +1454,14 @@ public class EventLogMonitorTests
     Assert.Equal("0 Entries shown from the System log matching the event source 'Z'.", lines[0]);
   }
 
-  [Fact]
-  public void OptionMultiSourceReturnsEvents()
+  [Theory]
+  [ClassData(typeof(PowerShellSampleEventLogLocationData))]
+  public void OptionMultiSourceReturnsEvents(string powerShellSampleEventLogLocation)
   {
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
-    string[] args = new string[] { "-s", "Restart, Test, Power", "-l", powerShellSampleEventLog, "-p", "*" };
+    string[] args = new string[] { "-s", "Restart, Test, Power", "-l", powerShellSampleEventLogLocation, "-p", "*" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -1504,8 +1619,9 @@ public class EventLogMonitorTests
     Console.In.Close();
   }
 
-  [Fact]
-  public void PowerShellLogReturnsSingleLinesOutput()
+  [Theory]
+  [ClassData(typeof(PowerShellSampleEventLogLocationData))]
+  public void PowerShellLogReturnsSingleLinesOutput(string powerShellSampleEventLogLocation)
   {
     // The "Windows PowerShell" log has an embedded '\r\n' in the event 800 which should be stripped out
 
@@ -1513,7 +1629,7 @@ public class EventLogMonitorTests
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "*", "-l", powerShellSampleEventLog };
+    string[] args = new string[] { "-p", "*", "-l", powerShellSampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -1531,8 +1647,9 @@ public class EventLogMonitorTests
     Assert.StartsWith("5 Entries shown from the", lines[5]);
   }
 
-  [Fact]
-  public void VSSLogReturnsASCIIOutputOutput()
+  [Theory]
+  [ClassData(typeof(VSSSampleEventLogLocationData))]
+  public void VSSLogReturnsASCIIOutputOutput(string vssSampleEventLogLocation)
   {
     // The "VSS" log has an 2 error messages with ASCII binary data in it which should be automatically be shown
 
@@ -1540,7 +1657,7 @@ public class EventLogMonitorTests
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "*", "-l", vSSSampleEventLog, "-s", "*" };
+    string[] args = new string[] { "-p", "*", "-l", vssSampleEventLogLocation, "-s", "*" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -1559,8 +1676,9 @@ public class EventLogMonitorTests
     Assert.StartsWith("4 Entries shown from the", lines[6]);
   }
 
-  [Fact]
-  public void VSSLogReturnsCorrectOutputWithOption2()
+  [Theory]
+  [ClassData(typeof(VSSSampleEventLogLocationData))]
+  public void VSSLogReturnsCorrectOutputWithOption2(string vssSampleEventLogLocation)
   {
     // The "VSS" log has error messages that use '\r\n' rather than '\r\n\rn' and this checks we handle that case
 
@@ -1568,7 +1686,7 @@ public class EventLogMonitorTests
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-i", "290107", "-l", vSSSampleEventLog, "-2" };
+    string[] args = new string[] { "-i", "290107", "-l", vssSampleEventLogLocation, "-2" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -1588,39 +1706,50 @@ public class EventLogMonitorTests
     Assert.StartsWith("Matching entry found in the", lines[7]);
   }
 
-  [Fact]
-  public void InvalidLogReturnsErrorWhenUsed()
+  [Theory]
+  [ClassData(typeof(InvalidEventLogLocationData))]
+  public void InvalidLogReturnsErrorWhenUsed(string invalidSampleEventLogLocation)
   {
     // The "Invalid-Log" log has a valid message from the VSS service in it but the FormatMessage API can't parse it
     // on an En-GB locale machine as the LocalMetadata MTA file is present for En-GB but does not have the message present in it.
-    // Therefore, we are using En-GB as the LocalMetadata MTA file for En-GB has no data. This causes an exception and we produce
+    // Therefore, we are using En-GB as the LocalMetadata MTA file to force the error. This causes an exception and we produce
     // an error which we are looking for in this test. 
-    // However, we need to force the thread locale to En-GB for this to happen or on a different locale machine, e,g En-US this
+    // However, we need to force the thread locale to En-GB for this to happen or on a different locale machine, e,g En-US, this
     // will return the actual message which we don't want here and this test will fail.
-    SetThreadLocale((ushort)CultureInfo.CurrentCulture.LCID); // it will be 2057 which is En-GB as set in the constructor
-    // replace stdout to capture it
-    var output = new StringWriter();
-    Console.SetOut(output);
+    var currentLocale = GetThreadLocale(); // get to reset
+    try
+    {
+      SetThreadLocale((ushort)CultureInfo.CurrentCulture.LCID); // it will be 2057 which is En-GB as set in the constructor
 
-    string[] args = new string[] { "-p", "*", "-l", invalidEventLogName, "-3" };
-    EventLogMonitor monitor = new();
-    bool initialized = monitor.Initialize(args);
-    Assert.True(initialized, $"{initialized} should be true");
-    monitor.MonitorEventLog();
-    string logOut = output.ToString();
-    stdoutput.WriteLine(logOut);
-    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
-    Assert.Equal(5, lines.Length); // one extra closing test line is returned                               
-    Assert.Equal("8224I: The description for Event ID 8224 from source VSS cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer.", lines[0].TrimEnd());
-    Assert.Equal("If the event originated on another computer, the display information had to be saved with the event.", lines[1]);
-    Assert.Equal("The following information was included with the event:", lines[2].TrimEnd());
-    Assert.Equal("Element not found. [21/12/2021 21:49:36.851]", lines[3].TrimEnd());
-    // tail
-    Assert.StartsWith("1 Entries shown from the", lines[4]);
+      // replace stdout to capture it
+      var output = new StringWriter();
+      Console.SetOut(output);
+
+      string[] args = new string[] { "-p", "*", "-l", invalidSampleEventLogLocation, "-3" };
+      EventLogMonitor monitor = new();
+      bool initialized = monitor.Initialize(args);
+      Assert.True(initialized, $"{initialized} should be true");
+      monitor.MonitorEventLog();
+      string logOut = output.ToString();
+      stdoutput.WriteLine(logOut);
+      string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+      Assert.Equal(5, lines.Length); // one extra closing test line is returned                               
+      Assert.Equal("8224I: The description for Event ID 8224 from source VSS cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer.", lines[0].TrimEnd());
+      Assert.Equal("If the event originated on another computer, the display information had to be saved with the event.", lines[1]);
+      Assert.Equal("The following information was included with the event:", lines[2].TrimEnd());
+      Assert.Equal("Element not found. [21/12/2021 21:49:36.851]", lines[3].TrimEnd());
+      // tail
+      Assert.StartsWith("1 Entries shown from the", lines[4]);
+    }
+    finally
+    {
+      SetThreadLocale((ushort)currentLocale);
+    }
   }
 
-  [Fact]
-  public void RestartManagerLogReturnsUserIdWhenVerboseOptionSet()
+  [Theory]
+  [ClassData(typeof(RestartManagerSampleEventLogLocationData))]
+  public void RestartManagerLogReturnsUserIdWhenVerboseOptionSet(string restartManagerSampleEventLogLocation)
   {
     // The RestartManager log contains an example of a user id, process id and thread id
 
@@ -1628,7 +1757,7 @@ public class EventLogMonitorTests
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "*", "-l", restartManagerSampleEventLog, "-v" };
+    string[] args = new string[] { "-p", "*", "-l", restartManagerSampleEventLogLocation, "-v" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -1640,12 +1769,13 @@ public class EventLogMonitorTests
     Assert.Equal("10005I: Machine restart is required. [16/01/2022 14:59:02.873]", lines[0].TrimEnd());
     Assert.StartsWith("Machine: mgk-PC3. Log: ", lines[1]);
     // Avoid putting the repo name in the comparison in case it's a github ZIP download that ends with "-main"
-    Assert.EndsWith("test\\EventLogMonitorTests\\SampleEventLogs\\RestartManager-Log.evtx. Source: Microsoft-Windows-RestartManager. User: S-1-5-18. ProcessId: 44120. ThreadId: 40204.", lines[1]);    // tail
+    Assert.EndsWith("\\RestartManager-Log.evtx. Source: Microsoft-Windows-RestartManager. User: S-1-5-18. ProcessId: 44120. ThreadId: 40204.", lines[1]);    // tail
     Assert.StartsWith("1 Entries shown from the", lines[2]);
   }
 
-  [Fact]
-  public void SecurityLogReturns_F_And_S_SuffixedEventIds()
+  [Theory]
+  [ClassData(typeof(SecuritySampleEventLogLocationData))]
+  public void SecurityLogReturns_F_And_S_SuffixedEventIds(string securitySampleEventLogLocation)
   {
     // The Security log should be formattable on any machine with En-US installed
     // TODO we should make our own catalogue for these security events just incase of a none En-US machine...
@@ -1654,7 +1784,7 @@ public class EventLogMonitorTests
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = new string[] { "-p", "*", "-l", securitySampleEventLog };
+    string[] args = new string[] { "-p", "*", "-l", securitySampleEventLogLocation };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
