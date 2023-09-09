@@ -770,12 +770,13 @@ public class EventLogMonitor
       {
         // try to get the specific language version of the message.
         // however, this may not be available so the message may not be found
+        // This is works best when the user has provided a DLL along side an EVTX
         CultureSpecificMessage.EventLogRecordWrapper wrapper = new(entry);
         message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, iChosenCulture.LCID, iChosenCulture.Name);
 
         if (string.IsNullOrEmpty(message))
         {
-          // try again with the console default culture instead - but must reset
+          // try again with the thread set to the requested culture instead - but must reset
           ushort origLCID = (ushort)GetThreadLocale();
           try
           {
@@ -791,32 +792,33 @@ public class EventLogMonitor
       }
       else
       {
+        // Get the message is the catalogue is correct and present in the registry or there is an MTA file along with the EVTX
         message = entry.FormatDescription();
 
-        // retry with US culture as this tries different places to find a catalogue
+        // retry with US culture as this tries different places to find a catalogue and will override the console culture
         if (string.IsNullOrEmpty(message))
         {
           // try to get the specific language version of the message.
           // however, this may not be available so the message may not be found
+          // This will work when the user has provided a DLL alongside the EVTX
           CultureSpecificMessage.EventLogRecordWrapper wrapper = new(entry);
           message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, iUSDefaultCulture.LCID, iUSDefaultCulture.Name);
         }
+      }
 
-        // try one last time, forcing thread to US
-        if (string.IsNullOrEmpty(message))
+      // Final fallback try one last time, forcing thread to US (but must reset)
+      if (string.IsNullOrEmpty(message))
+      {
+        // try again with the console default culture instead - but must reset
+        ushort origLCID = (ushort)GetThreadLocale();
+        try
         {
-          // try again with the console default culture instead - but must reset
-          ushort origLCID = (ushort)GetThreadLocale();
-          try
-          {
-            SetThreadLocale((ushort)iUSDefaultCulture.LCID); // force US
-            // Console.WriteLine("ORIG LCID " + origLCID);
-            message = entry.FormatDescription();
-          }
-          finally
-          {
-            SetThreadLocale(origLCID);
-          }
+          SetThreadLocale((ushort)iUSDefaultCulture.LCID); // force US
+          message = entry.FormatDescription();
+        }
+        finally
+        {
+          SetThreadLocale(origLCID);
         }
       }
 

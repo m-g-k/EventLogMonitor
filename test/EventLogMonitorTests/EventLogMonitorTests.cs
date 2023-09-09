@@ -33,6 +33,8 @@ public class EventLogMonitorTests
 {
   [SuppressMessage("Microsoft.Usage", "IDE0052:RemoveUnreadPrivateMember", MessageId = "stdoutput")]
   private readonly ITestOutputHelper stdoutput;
+  private static readonly string ace11SampleEventLogDLLsLocation = "../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/ACE-11-Log.evtx";
+  private static readonly string ace11SampleEventLogLocaleMetaDataLocation = "../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/ACE-11-Log.evtx";
 
   [DllImport("Kernel32.dll", CharSet = CharSet.Auto)]
   static extern System.UInt16 SetThreadLocale(System.UInt16 langId);
@@ -44,8 +46,8 @@ public class EventLogMonitorTests
   {
     public Ace11SampleEventLogLocationData()
     {
-      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/ACE-11-Log.evtx");
-      Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/ACE-11-Log.evtx");
+      Add(ace11SampleEventLogDLLsLocation);
+      Add(ace11SampleEventLogLocaleMetaDataLocation);
     }
   }
 
@@ -100,6 +102,28 @@ public class EventLogMonitorTests
     {
       Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/Invalid-Log.evtx");
       Add("../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/Invalid-Log.evtx");
+    }
+  }
+
+  class Ace11SampleEventLogCultureSpecificData : TheoryData<string, string>
+  {
+    public Ace11SampleEventLogCultureSpecificData()
+    {
+      Add("en-US", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]");
+      Add("de-DE", "BIP2152I: ( MGK.main ) Konfigurationsnachricht empfangen. [23/12/2021 11:58:11.763]");
+      Add("es-ES", "BIP2152I: ( MGK.main ) Se ha recibido el mensaje de configuración. [23/12/2021 11:58:11.763]");
+      Add("fr-FR", "BIP2152I: ( MGK.main ) Message de configuration reçu. [23/12/2021 11:58:11.763]");
+      Add("it-IT", "BIP2152I: ( MGK.main ) È stato ricevuto un messaggio di configurazione. [23/12/2021 11:58:11.763]");
+      Add("ja-JP", "BIP2152I: ( MGK.main ) 構成メッセージが受信されました。 [23/12/2021 11:58:11.763]");
+      Add("ko-KR", "BIP2152I: ( MGK.main ) 구성 메시지를 수신했습니다. [23/12/2021 11:58:11.763]");
+      Add("pl-PL", "BIP2152I: ( MGK.main ) Odebrano komunikat dotyczący konfiguracji. [23/12/2021 11:58:11.763]");
+      Add("pt-BR", "BIP2152I: ( MGK.main ) Mensagem de configuração recebida. [23/12/2021 11:58:11.763]");
+      Add("ru-RU", "BIP2152I: ( MGK.main ) Получено сообщение конфигурации. [23/12/2021 11:58:11.763]");
+      Add("tr-TR", "BIP2152I: ( MGK.main ) Yapılandırma iletisi alındı. [23/12/2021 11:58:11.763]");
+      Add("zh-CN", "BIP2152I: ( MGK.main ) 接收到配置消息。 [23/12/2021 11:58:11.763]");
+      Add("zh-TW", "BIP2152I: ( MGK.main ) 接收到配置訊息。 [23/12/2021 11:58:11.763]");
+      Add("ka-GE", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // ka-GE is not present in dll or MTA so expect gracefull fall back to en-US
+      Add("en-GB", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // en-GB is not present in dll or MTA so expect gracefull fall back to en-US
     }
   }
 
@@ -912,6 +936,50 @@ public class EventLogMonitorTests
     Assert.Single(lines);
     // tail
     Assert.StartsWith("0 Entries shown from the", lines[0]);
+  }
+
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogCultureSpecificData))]
+  public void EventLogWithLocalMetaDataReturnsCorrectCultureSpecificMessages(string culture, string expectedResult)
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    string[] args = new string[] { "-p", "1", "-l", ace11SampleEventLogLocaleMetaDataLocation, "-c", culture, "-fn", "2152" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(2, lines.Length); // one extra closing test line is returned
+    // most recent 2 entries
+    Assert.Equal(expectedResult, lines[0]);
+    Assert.StartsWith("1 Entries shown from the", lines[1]);
+  }
+
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogCultureSpecificData))]
+  public void EventLogWithDLLsReturnsCorrectCultureSpecificMessages(string culture, string expectedResult)
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    string[] args = new string[] { "-p", "1", "-l", ace11SampleEventLogDLLsLocation, "-c", culture, "-fn", "2152" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(2, lines.Length); // one extra closing test line is returned
+    // most recent 2 entries
+    Assert.Equal(expectedResult, lines[0]);
+    Assert.StartsWith("1 Entries shown from the", lines[1]);
   }
 
   [Theory]
