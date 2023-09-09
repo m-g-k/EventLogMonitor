@@ -544,6 +544,11 @@ public class EventLogMonitor
     {
       iTailEventLog = false; //cannot tail a file
       pathType = PathType.FilePath;
+      if (iPreviousRecordCount == 0)
+      {
+        // showing 0 events from a file is not much use so default to showing all events
+        iPreviousRecordCount = uint.MaxValue; 
+      }
     }
 
     iEventLogQuery = new EventLogQuery(iLogName, pathType, iEntryEventIdAndLogLevelQuery)

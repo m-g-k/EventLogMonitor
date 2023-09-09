@@ -148,13 +148,13 @@ You can also use the `-l` option to view the events in an exported event log fil
 `...`<br>
 `5 Entries shown from the c:\temp\WonderApp.evtx log matching the event source '*'.`<br>
 
-Note that when using an event log file, you will need to specify `-p` to see the contents of the log. Also note that tailing is automatically disabled when viewing a file. All the other options such as `-s` along with the other viewing options described below work on event log files.
+Note that when using an event log file, the default is to show the entire contents of the log file. To show fewer entries use the `-p` option with a value, e.g. `-p 10`. Also note that tailing is automatically disabled when viewing a file. All the other options such as `-s` along with the other viewing options described below work on event log files.
 
 To see more examples of using event log files, look at some of the tests for EventLogMonitor which use exported log files extensively to ensure consistent output.
 
 When using event log files exported from a different machine, it may be necessary to copy the message catalogue `.dll` (or `.exe` in a few cases) file from the source machine to the one being used to read the log file in order to be able to read the events properly. Simply place the `.dll` file into the same folder as the log file itself and give it the same name as the log file, but with a .dll extension. For example for, if you have an exported log in the temp folder called `c:\temp\WonderApp.evtx`, place the message catalogue dll into the `c:\temp` folder and call it  `c:\temp\WonderApp.dll` and the EventLogMonitor will use this file when reading the log to display the events.
 
-Remember, an exported event log file cannot be tailed so you should use the `-p` and `-s` options amongst others to view the events in the log file.
+Remember, an exported event log file cannot be tailed but you can use the `-s` option amongst others to view a subset of events in the log file.
 
 ## The type and shape of events
 As documented in these rather old Microsoft MMC [guidelines](https://docs.microsoft.com/en-us/previous-versions/windows/desktop/bb226812(v=vs.85)), there are traditionally three main types of events that can be sent to the Event Log:
@@ -353,6 +353,8 @@ When redirecting output to a file, you can still press `<Enter>`, `'Q'` or `<Esc
 ## Viewing output in a different language
 You can use the `-c <culture>` option to change the culture (or language) used to output the language. Any valid culture is allowed as long as the message catalogue for the event contains the message in the chosen language. Valid values for `-c` include:
 * `De-DE`
+* `En-GB`
+* `En-US`
 * `Es-ES`
 * `Fr-FR`
 * `It-IT`
@@ -398,7 +400,7 @@ or perhaps:
 
 `Machine: mgk-PC3. Log: Application. Source: iBtSiva. Win32Msg: The system cannot find the path specified. (3).`<br>
 
-Of coourse the exact message shown will reflect the actual event ID. This allows you to see the same information in EventLogMonitor that you do in the Event Viewer.
+Of course the exact message shown will reflect the actual event ID. This allows you to see the same information in EventLogMonitor that you do in the Event Viewer.
 
 ## Viewing the Security log
 The `Security` log can be viewed like any other log by specifing it's name with the `-l` option:<br>

@@ -478,6 +478,7 @@ public class EventLogMonitorTests
     var output = new StringWriter();
     Console.SetOut(output);
 
+    // note that as we do not specify a -p option, all events are returned after the expected warning message
     string[] args = new string[] { "-l", ace11SampleEventLogLocation, "-c", "fake" };
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
@@ -486,10 +487,16 @@ public class EventLogMonitorTests
     string logOut = output.ToString();
     stdoutput.WriteLine(logOut);
     string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-    Assert.Equal(2, lines.Length); // one extra closing test line is returned
-                                   // most recent 2 entries
+    Assert.Equal(66, lines.Length); // one extra closing test line is returned
+    // expected warning line
     Assert.Equal("Culture is not supported. 'fake' is an invalid culture identifier. Defaulting to 'En-US'.", lines[0].TrimEnd());
-    Assert.StartsWith("0 Entries shown from the", lines[1]);
+    // oldest 2 entries
+    Assert.Equal("BIP2001I: ( MGK ) The IBM App Connect Enterprise service has started at version '110011'; process ID 7192. [18/11/2021 18:21:16.344]", lines[1]);
+    Assert.Equal("BIP3132I: ( MGK ) The HTTP Listener has started listening on port ''4414'' for ''RestAdmin http'' connections. [18/11/2021 18:21:26.571]", lines[2]);
+    // most recent 2 entries
+    Assert.Equal("BIP2269I: ( MGK.main ) Deployed resource ''test'' (uuid=''test'',type=''MessageFlow'') started successfully. [23/12/2021 11:58:12.195]", lines[63]);
+    Assert.Equal("BIP2154I: ( MGK.main ) Integration server finished with Configuration message. [23/12/2021 11:58:12.195]", lines[64]);
+    Assert.StartsWith("64 Entries shown from the", lines[65]);
   }
 
   [Theory]
