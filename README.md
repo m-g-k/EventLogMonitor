@@ -402,7 +402,7 @@ or even:
 
 for an event ID of 3.
 
-What is happening here is that if the Event Viewer detects that the event was written with a "qualifier" of zero (see [EventRecord.Qualifiers](https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.eventing.reader.eventrecord.qualifiers?view=dotnet-plat-ext-6.0#system-diagnostics-eventing-reader-eventrecord-qualifiers)) it tries to convert the event ID into a Win32 error message. If that convertion is sucessful then the Win32 error message that corresponds to the event ID is output instead of the default error message shown above. Whilst this approach means the event viewer output contains fewer error messages like the one above, it can be misleading in many cases as the Win32 message may not match the event. Therefore, EventLogMonitor chooses to always output the original error message instead which more acurately reflects the situation. However, if you also use the `-v` "verbose" option then you will see an extra entry on the verbose output line for the `Win32Msg` in this case:<br>
+What is happening here is that if the Event Viewer detects that the event was written with a "qualifier" of zero (see [EventRecord.Qualifiers](https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.eventing.reader.eventrecord.qualifiers?view=dotnet-plat-ext-6.0#system-diagnostics-eventing-reader-eventrecord-qualifiers)) it tries to convert the event ID into a Win32 error message. If that conversion is sucessful then the Win32 error message that corresponds to the event ID is output instead of the default error message shown above. Whilst this approach means the event viewer output contains fewer error messages like the one above, it can be misleading in many cases as the Win32 message may not match the event. Therefore, EventLogMonitor chooses to always output the original error message instead which more acurately reflects the situation. However, if you also use the `-v` "verbose" option then you will see an extra entry on the verbose output line for the `Win32Msg` in this case:<br>
 
 `Machine: mgk-PC3. Log: Application. Source: Firefox Default Browser Agent. Win32Msg: The operation completed successfully. (0).`<br>
 
@@ -430,7 +430,7 @@ Once your prompt is elevated then all the other options like `-p` and `-3` etc, 
 ## Miscellaneous options
 There are a final few options that have not been covered elsewhere. These are:
 * `-nt` or "No Tailing". If you are only wanting to view existing events, specifying `-nt` will stop the tool tailing the log at the end of the output.
-* `-utc`. Display the event timestamp in UTC time rather than converting it to local time. Local time convertion is the default.
+* `-utc`. Display the event timestamp in UTC time rather than converting it to local time. Local time conversion is the default.
 * `-?` or `-help`. The help commands produce a simplified version of this readme.
 * `-version`. Displays the version of the EventLogMonitor tool being run.
 
