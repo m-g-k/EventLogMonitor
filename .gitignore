@@ -7,3 +7,6 @@ out/*
 .vs/*
 src/EventLogMonitor/Properties/launchSettings.json
 *.pdf
+*.drawio.bkp
+*.drawio.dtmp
+*.docx

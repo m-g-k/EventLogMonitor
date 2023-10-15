@@ -25,16 +25,20 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Runtime.InteropServices;
+using System.Numerics;
+using Microsoft.Win32;
 
 namespace EventLogMonitor;
 
 [Collection("EventLogMonitor")]
 public class EventLogMonitorTests
 {
-  [SuppressMessage("Microsoft.Usage", "IDE0052:RemoveUnreadPrivateMember", MessageId = "stdoutput")]
+  // [SuppressMessage("Microsoft.Usage", "IDE0052:RemoveUnreadPrivateMember", MessageId = "stdoutput")]
   private readonly ITestOutputHelper stdoutput;
   private static readonly string ace11SampleEventLogDLLsLocation = "../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/ACE-11-Log.evtx";
   private static readonly string ace11SampleEventLogLocaleMetaDataLocation = "../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/ACE-11-Log.evtx";
+
+  private static readonly CultureInfo enGBCulture = new("En-GB", true);
 
   [DllImport("Kernel32.dll", CharSet = CharSet.Auto)]
   static extern System.UInt16 SetThreadLocale(System.UInt16 langId);
@@ -105,25 +109,227 @@ public class EventLogMonitorTests
     }
   }
 
-  class Ace11SampleEventLogCultureSpecificData : TheoryData<string, string>
+  class Ace11SampleEventLogCultureSpecificData : TheoryData<int, string, string>
   {
     public Ace11SampleEventLogCultureSpecificData()
     {
-      Add("en-US", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]");
-      Add("de-DE", "BIP2152I: ( MGK.main ) Konfigurationsnachricht empfangen. [23/12/2021 11:58:11.763]");
-      Add("es-ES", "BIP2152I: ( MGK.main ) Se ha recibido el mensaje de configuración. [23/12/2021 11:58:11.763]");
-      Add("fr-FR", "BIP2152I: ( MGK.main ) Message de configuration reçu. [23/12/2021 11:58:11.763]");
-      Add("it-IT", "BIP2152I: ( MGK.main ) È stato ricevuto un messaggio di configurazione. [23/12/2021 11:58:11.763]");
-      Add("ja-JP", "BIP2152I: ( MGK.main ) 構成メッセージが受信されました。 [23/12/2021 11:58:11.763]");
-      Add("ko-KR", "BIP2152I: ( MGK.main ) 구성 메시지를 수신했습니다. [23/12/2021 11:58:11.763]");
-      Add("pl-PL", "BIP2152I: ( MGK.main ) Odebrano komunikat dotyczący konfiguracji. [23/12/2021 11:58:11.763]");
-      Add("pt-BR", "BIP2152I: ( MGK.main ) Mensagem de configuração recebida. [23/12/2021 11:58:11.763]");
-      Add("ru-RU", "BIP2152I: ( MGK.main ) Получено сообщение конфигурации. [23/12/2021 11:58:11.763]");
-      Add("tr-TR", "BIP2152I: ( MGK.main ) Yapılandırma iletisi alındı. [23/12/2021 11:58:11.763]");
-      Add("zh-CN", "BIP2152I: ( MGK.main ) 接收到配置消息。 [23/12/2021 11:58:11.763]");
-      Add("zh-TW", "BIP2152I: ( MGK.main ) 接收到配置訊息。 [23/12/2021 11:58:11.763]");
-      Add("ka-GE", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // ka-GE is not present in dll or MTA so expect gracefull fall back to en-US
-      Add("en-GB", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // en-GB is not present in dll or MTA so expect gracefull fall back to en-US
+      // first test named cultures
+      Add(1, "en-US", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]");
+      Add(2, "de-DE", "BIP2152I: ( MGK.main ) Konfigurationsnachricht empfangen. [23/12/2021 11:58:11.763]");
+      Add(3, "es-ES", "BIP2152I: ( MGK.main ) Se ha recibido el mensaje de configuración. [23/12/2021 11:58:11.763]");
+      Add(4, "fr-FR", "BIP2152I: ( MGK.main ) Message de configuration reçu. [23/12/2021 11:58:11.763]");
+      Add(5, "it-IT", "BIP2152I: ( MGK.main ) È stato ricevuto un messaggio di configurazione. [23/12/2021 11:58:11.763]");
+      Add(6, "ja-JP", "BIP2152I: ( MGK.main ) 構成メッセージが受信されました。 [23/12/2021 11:58:11.763]");
+      Add(7, "ko-KR", "BIP2152I: ( MGK.main ) 구성 메시지를 수신했습니다. [23/12/2021 11:58:11.763]");
+      Add(8, "pl-PL", "BIP2152I: ( MGK.main ) Odebrano komunikat dotyczący konfiguracji. [23/12/2021 11:58:11.763]");
+      Add(9, "pt-BR", "BIP2152I: ( MGK.main ) Mensagem de configuração recebida. [23/12/2021 11:58:11.763]");
+      Add(10, "ru-RU", "BIP2152I: ( MGK.main ) Получено сообщение конфигурации. [23/12/2021 11:58:11.763]");
+      Add(11, "tr-TR", "BIP2152I: ( MGK.main ) Yapılandırma iletisi alındı. [23/12/2021 11:58:11.763]");
+      Add(12, "zh-CN", "BIP2152I: ( MGK.main ) 接收到配置消息。 [23/12/2021 11:58:11.763]");
+      Add(13, "zh-TW", "BIP2152I: ( MGK.main ) 接收到配置訊息。 [23/12/2021 11:58:11.763]");
+      // test missing cases
+      Add(14, "ka-GE", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // ka-GE is not present in dll or MTA so expect gracefull fall back to en-US
+      Add(15, "en-GB", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // en-GB is not present in dll or MTA so expect gracefull fall back to en-US
+      // test again with culture as hex LCID
+      Add(16, "0x0409", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]");
+      Add(17, "0x0407", "BIP2152I: ( MGK.main ) Konfigurationsnachricht empfangen. [23/12/2021 11:58:11.763]");
+      Add(18, "0x0c0A", "BIP2152I: ( MGK.main ) Se ha recibido el mensaje de configuración. [23/12/2021 11:58:11.763]");
+      Add(19, "0x040C", "BIP2152I: ( MGK.main ) Message de configuration reçu. [23/12/2021 11:58:11.763]");
+      Add(20, "0x0410", "BIP2152I: ( MGK.main ) È stato ricevuto un messaggio di configurazione. [23/12/2021 11:58:11.763]");
+      Add(21, "0x0411", "BIP2152I: ( MGK.main ) 構成メッセージが受信されました。 [23/12/2021 11:58:11.763]");
+      Add(22, "0x0412", "BIP2152I: ( MGK.main ) 구성 메시지를 수신했습니다. [23/12/2021 11:58:11.763]");
+      Add(23, "0x0415", "BIP2152I: ( MGK.main ) Odebrano komunikat dotyczący konfiguracji. [23/12/2021 11:58:11.763]");
+      Add(24, "0x0416", "BIP2152I: ( MGK.main ) Mensagem de configuração recebida. [23/12/2021 11:58:11.763]");
+      Add(25, "0x0419", "BIP2152I: ( MGK.main ) Получено сообщение конфигурации. [23/12/2021 11:58:11.763]");
+      Add(26, "0x041F", "BIP2152I: ( MGK.main ) Yapılandırma iletisi alındı. [23/12/2021 11:58:11.763]");
+      Add(27, "0x0804", "BIP2152I: ( MGK.main ) 接收到配置消息。 [23/12/2021 11:58:11.763]");
+      Add(28, "0x0404", "BIP2152I: ( MGK.main ) 接收到配置訊息。 [23/12/2021 11:58:11.763]");
+      // test missing cases as hex LCID
+      Add(29, "0x0437", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // ka-GE is not present in dll or MTA so expect gracefull fall back to en-US
+      Add(30, "0x0809", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // en-GB is not present in dll or MTA so expect gracefull fall back to en-US
+      // test again with culture as decimal LCID
+      Add(31, "1033", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]");
+      Add(32, "1031", "BIP2152I: ( MGK.main ) Konfigurationsnachricht empfangen. [23/12/2021 11:58:11.763]");
+      Add(33, "3082", "BIP2152I: ( MGK.main ) Se ha recibido el mensaje de configuración. [23/12/2021 11:58:11.763]");
+      Add(34, "1036", "BIP2152I: ( MGK.main ) Message de configuration reçu. [23/12/2021 11:58:11.763]");
+      Add(35, "1040", "BIP2152I: ( MGK.main ) È stato ricevuto un messaggio di configurazione. [23/12/2021 11:58:11.763]");
+      Add(36, "1041", "BIP2152I: ( MGK.main ) 構成メッセージが受信されました。 [23/12/2021 11:58:11.763]");
+      Add(37, "1042", "BIP2152I: ( MGK.main ) 구성 메시지를 수신했습니다. [23/12/2021 11:58:11.763]");
+      Add(38, "1045", "BIP2152I: ( MGK.main ) Odebrano komunikat dotyczący konfiguracji. [23/12/2021 11:58:11.763]");
+      Add(39, "1046", "BIP2152I: ( MGK.main ) Mensagem de configuração recebida. [23/12/2021 11:58:11.763]");
+      Add(40, "1049", "BIP2152I: ( MGK.main ) Получено сообщение конфигурации. [23/12/2021 11:58:11.763]");
+      Add(41, "1055", "BIP2152I: ( MGK.main ) Yapılandırma iletisi alındı. [23/12/2021 11:58:11.763]");
+      Add(42, "2052", "BIP2152I: ( MGK.main ) 接收到配置消息。 [23/12/2021 11:58:11.763]");
+      Add(43, "1028", "BIP2152I: ( MGK.main ) 接收到配置訊息。 [23/12/2021 11:58:11.763]");
+      // test missing cases as decimal LCID
+      Add(44, "1079", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // ka-GE is not present in dll or MTA so expect gracefull fall back to en-US
+      Add(45, "2057", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // en-GB is not present in dll or MTA so expect gracefull fall back to en-US
+      // test edge cases as hex LCID
+      Add(46, "0x0000", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 0 is not present in dll or MTA so expect gracefull fall back to en-US
+      Add(47, "0xFFFF", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 65535 is not present in dll or MTA so expect gracefull fall back to en-US
+      // test edge cases as decimal LCID
+      Add(48, "0", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 0 is not present in dll or MTA so expect gracefull fall back to en-US
+      Add(49, "65535", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 65535 is not present in dll or MTA so expect gracefull fall back to en-US
+    }
+  }
+
+  private static readonly List<string> miscMaxResults = new()
+  {
+    "2155I: ( Msg 2155 ) [MAX(FFFF)] Message 2155 in LCID FFFF (MAX). Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
+    "3132W: ( Msg 3132 ) [MAX(FFFF)] Message 3132 in LCID FFFF (MAX). Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
+    "2208E: ( Msg 2208 ) [MAX(FFFF)] Message 2208 in LCID FFFF (MAX). Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "namarie. Index: 874790",
+    "1234I: ( Msg 1234 ) [MAX(FFFF)] Message 1234 in LCID FFFF (MAX). Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "1234I: ( Msg 1234 ) [MAX(FFFF)] Message 1234 in LCID FFFF (MAX). Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
+    "1234I: ( Msg 1234 ) [MAX(FFFF)] Message 1234 in LCID FFFF (MAX). Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+  };
+
+  private static readonly List<string> miscUKResults = new()
+  {
+    "2155I: ( Msg 2155 ) [English GB(2057)] Message 2155 in En-GB. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
+    "3132W: ( Msg 3132 ) [English GB(2057)] Message 3132 in En-GB. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
+    "2208E: ( Msg 2208 ) [English GB(2057)] Message 2208 in En-GB. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "namarie. Index: 874790",
+    "1234I: ( Msg 1234 ) [English GB(2057)] Message 1234 in En-GB. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "1234I: ( Msg 1234 ) [English GB(2057)] Message 1234 in En-GB. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
+    "1234I: ( Msg 1234 ) [English GB(2057)] Message 1234 in En-GB. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+  };
+
+  private static readonly List<string> miscFrenchResults = new()
+  {
+    "2155I: ( Msg 2155 ) [French(1036)] Message 2155 in French. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
+    "3132W: ( Msg 3132 ) [French(1036)] Message 3132 in French. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
+    "2208E: ( Msg 2208 ) [French(1036)] Message 2208 in French. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "namarie. Index: 874790",
+    "1234I: ( Msg 1234 ) [French(1036)] Message 1234 in French. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "1234I: ( Msg 1234 ) [French(1036)] Message 1234 in French. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
+    "1234I: ( Msg 1234 ) [French(1036)] Message 1234 in French. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]",
+  };
+
+  private static readonly List<string> miscUSResults = new()
+  {
+    "2155I: ( Msg 2155 ) [English US(1033)] Message 2155 in En-US. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
+    "3132W: ( Msg 3132 ) [English US(1033)] Message 3132 in En-US. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
+    "2208E: ( Msg 2208 ) [English US(1033)] Message 2208 in En-US. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "namarie. Index: 874790",
+    "1234I: ( Msg 1234 ) [English US(1033)] Message 1234 in En-US. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "1234I: ( Msg 1234 ) [English US(1033)] Message 1234 in En-US. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
+    "1234I: ( Msg 1234 ) [English US(1033)] Message 1234 in En-US. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+  };
+
+  private static readonly List<string> miscGermanResults = new()
+  {
+    "2155I: ( Msg 2155 ) [German(1031)] Message 2155 in German. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
+    "3132W: ( Msg 3132 ) [German(1031)] Message 3132 in Gernam. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
+    "2208E: ( Msg 2208 ) [German(1031)] Message 2208 in German. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "namarie. Index: 874790",
+    "1234I: ( Msg 1234 ) [German(1031)] Message 1234 in German. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "1234I: ( Msg 1234 ) [German(1031)] Message 1234 in German. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
+    "1234I: ( Msg 1234 ) [German(1031)] Message 1234 in German. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+  };
+
+  private static readonly List<string> miscDanishResults = new()
+  {
+    "2155I: ( Msg 2155 ) [Danish(1030)] Message 2155 in Danish. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
+    "3132W: ( Msg 3132 ) [Danish(1030)] Message 3132 in Danish. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
+    "2208E: ( Msg 2208 ) [Danish(1030)] Message 2208 in Danish. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "namarie. Index: 874790",
+    "1234I: ( Msg 1234 ) [Danish(1030)] Message 1234 in Danish. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "1234I: ( Msg 1234 ) [Danish(1030)] Message 1234 in Danish. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
+    "1234I: ( Msg 1234 ) [Danish(1030)] Message 1234 in Danish. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+  };
+
+  private static readonly List<string> miscDutchResults = new()
+  {
+    "2155I: ( Msg 2155 ) [Dutch(19)] Message 2155 in Dutch. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
+    "3132W: ( Msg 3132 ) [Dutch(19)] Message 3132 in Dutch. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
+    "2208E: ( Msg 2208 ) [Dutch(19)] Message 2208 in Dutch. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "namarie. Index: 874790",
+    "1234I: ( Msg 1234 ) [Dutch(19)] Message 1234 in Dutch. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "1234I: ( Msg 1234 ) [Dutch(19)] Message 1234 in Dutch. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
+    "1234I: ( Msg 1234 ) [Dutch(19)] Message 1234 in Dutch. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+  };
+
+  private static readonly List<string> miscArabicResults = new()
+  {
+    "2155I: ( Msg 2155 ) [Arabic(1)] Message 2155 in Arabic. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
+    "3132W: ( Msg 3132 ) [Arabic(1)] Message 3132 in Arabic. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
+    "2208E: ( Msg 2208 ) [Arabic(1)] Message 2208 in Arabic. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "namarie. Index: 874790",
+    "1234I: ( Msg 1234 ) [Arabic(1)] Message 1234 in Arabic. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "1234I: ( Msg 1234 ) [Arabic(1)] Message 1234 in Arabic. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
+    "1234I: ( Msg 1234 ) [Arabic(1)] Message 1234 in Arabic. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+  };
+
+  private static readonly List<string> miscLanguageNeutralResults = new()
+  {
+    "2155I: ( Msg 2155 ) [LanguageNeutral(0)] Message 2155 in LanguageNeutral 0. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
+    "3132W: ( Msg 3132 ) [LanguageNeutral(0)] Message 3132 in LanguageNeutral 0. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
+    "2208E: ( Msg 2208 ) [LanguageNeutral(0)] Message 2208 in LanguageNeutral 0. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "namarie. Index: 874790",
+    "1234I: ( Msg 1234 ) [LanguageNeutral(0)] Message 1234 in LanguageNeutral 0. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "1234I: ( Msg 1234 ) [LanguageNeutral(0)] Message 1234 in LanguageNeutral 0. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
+    "1234I: ( Msg 1234 ) [LanguageNeutral(0)] Message 1234 in LanguageNeutral 0. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+  };
+
+  class MiscTestsSpecificData : TheoryData<int, string, string, List<string>>
+  {
+    private static readonly string ibase = "../../../../../test/EventLogMonitorTests/SampleEventLogsMisc_Dlls/";
+    private static readonly string iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0 = ibase + "misc-LCID-65535-2057-1036-1033-1031-1030-19-1-0.evtx";
+    private static readonly string iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1 = ibase + "misc-LCID-65535-2057-1036-1033-1031-1030-19-1.evtx";
+    private static readonly string iMisc_LCID_65535_1036_1033_1031_1030_19_1 = ibase + "misc-LCID-65535-1036-1033-1031-1030-19-1.evtx";
+    private static readonly string iMisc_LCID_65535_1036_1031_1030_19_0 = ibase + "misc-LCID-65535-1036-1031-1030-19-0.evtx";
+    private static readonly string iMisc_LCID_65535_1036_1031_1030_19_1 = ibase + "misc-LCID-65535-1036-1031-1030-19-1.evtx";
+    private static readonly string iMisc_LCID_65535_1036_1031_1030_19 = ibase + "misc-LCID-65535-1036-1031-1030-19.evtx";
+    private static readonly string iMisc_LCID_65535 = ibase + "misc-LCID-65535.evtx";
+
+
+    public MiscTestsSpecificData()
+    {
+      // first check we can get all the messages out of the "complete" dll with all the languages
+      Add(1, "0x0", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscLanguageNeutralResults); // 0
+      Add(2, "Ar", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscArabicResults);           // 1
+      Add(3, "Nl-NL", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscDutchResults);         // 19
+      Add(4, "Da-DK", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscDanishResults);        // 1030
+      Add(5, "De-DE", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscGermanResults);        // 1031
+      Add(6, "en-US", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscUSResults);            // 1033
+      Add(7, "Fr-FR", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscFrenchResults);        // 1036
+      Add(8, "en-GB", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscUKResults);            // 2057
+      Add(9, "0xFFFF", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscMaxResults);          // 65535
+
+      // now check that we fall back to 0 when we ask for italian even when uk english and us english are present if 0 is present
+      Add(10, "it-IT", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscLanguageNeutralResults);
+
+      // now check that we fall back to US when we ask for italian even when uk english and us english are present but 0 is not
+      Add(11, "it-IT", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1, miscUSResults);
+
+      // now check that we fall back to US when we ask for uk english and us is present but 0 is not
+      Add(12, "en-GB", iMisc_LCID_65535_1036_1033_1031_1030_19_1, miscUSResults);
+
+      // now check that we fall back to 0 when we ask for uk or us english and us english is not present and 0 is present
+      Add(13, "en-GB", iMisc_LCID_65535_1036_1031_1030_19_0, miscLanguageNeutralResults);
+      Add(14, "en-US", iMisc_LCID_65535_1036_1031_1030_19_0, miscLanguageNeutralResults);
+
+      // now check that we fall back to 1 when we ask for uk or us english and there is no 0 or us english
+      Add(15, "en-GB", iMisc_LCID_65535_1036_1031_1030_19_1, miscArabicResults);
+      Add(16, "en-US", iMisc_LCID_65535_1036_1031_1030_19_1, miscArabicResults);
+
+      // now check that we fall back to 19 when we ask for uk or us english and there is no 1 or 0 or us english
+      Add(17, "en-GB", iMisc_LCID_65535_1036_1031_1030_19, miscDutchResults);
+      Add(18, "en-US", iMisc_LCID_65535_1036_1031_1030_19, miscDutchResults);
+
+      // fall back to Max when it is the only msg table in the dll
+      Add(19, "en-US", iMisc_LCID_65535, miscMaxResults);
+
+      // calling with no culture should give lang neutral if present, or local LCID or US or else lowest numbered LCID
+      // see the flow chart in ExportingEvents.md for the rules
+      Add(20, "", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscLanguageNeutralResults); // 0
+      Add(21, "", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1, miscUKResults); // 2057
+      Add(22, "", iMisc_LCID_65535_1036_1033_1031_1030_19_1, miscUSResults); // 1033
+      Add(23, "", iMisc_LCID_65535_1036_1031_1030_19_0, miscLanguageNeutralResults); // 0
+      Add(24, "", iMisc_LCID_65535_1036_1031_1030_19_1, miscArabicResults); // 1
+      Add(25, "", iMisc_LCID_65535_1036_1031_1030_19, miscDutchResults); // 19
+      Add(26, "", iMisc_LCID_65535, miscMaxResults); // 65535 this is the "only" and therefore "lowest numbered" msg table
     }
   }
 
@@ -134,7 +340,7 @@ public class EventLogMonitorTests
 
     // Several tests produce output that includes the expected date and time in UK (En-GB - LCID 2057) format,
     // so we must force UK style output even when the machine running the tests is not in this locale.
-    Thread.CurrentThread.CurrentCulture = new CultureInfo("En-GB", true);
+    Thread.CurrentThread.CurrentCulture = enGBCulture;
   }
 
   [Fact]
@@ -947,9 +1153,10 @@ public class EventLogMonitorTests
 
   [Theory]
   [ClassData(typeof(Ace11SampleEventLogCultureSpecificData))]
-  public void EventLogWithLocalMetaDataReturnsCorrectCultureSpecificMessages(string culture, string expectedResult)
+  public void EventLogWithLocalMetaDataReturnsCorrectCultureSpecificMessages(int testNumber, string culture, string expectedResult)
   {
     // replace stdout to capture it
+    Console.Write(testNumber); // write to force usage
     var output = new StringWriter();
     Console.SetOut(output);
 
@@ -969,9 +1176,10 @@ public class EventLogMonitorTests
 
   [Theory]
   [ClassData(typeof(Ace11SampleEventLogCultureSpecificData))]
-  public void EventLogWithDLLsReturnsCorrectCultureSpecificMessages(string culture, string expectedResult)
+  public void EventLogWithDLLsReturnsCorrectCultureSpecificMessages(int testNumber, string culture, string expectedResult)
   {
     // replace stdout to capture it
+    Console.Write(testNumber); // write to force usage
     var output = new StringWriter();
     Console.SetOut(output);
 
@@ -987,6 +1195,45 @@ public class EventLogMonitorTests
     // most recent 2 entries
     Assert.Equal(expectedResult, lines[0]);
     Assert.StartsWith("1 Entries shown from the", lines[1]);
+  }
+
+  [Theory()] // Skip = "Skipped as testing EventLogMonitorTestLogSource"
+  [ClassData(typeof(MiscTestsSpecificData))]
+  public void MiscSpecificMessages(int testNumber, string culture, string dllLocation, List<string> expectedResult)
+  {
+    // make sure the EventLogMonitorTestLogSource does not exist in the registry as it will cause 
+    // this test to fail when it's not it's not supposed to work when installed
+    if (EventLogSourceExists("Application\\EventLogMonitorTestLogSource"))
+    {
+      throw new Exception("SETUP ERROR: HKLM\\SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\EventLogMonitorTestLogSource must be disabled before running this test: " + testNumber);
+    }
+
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    string[] args;
+    if (String.IsNullOrEmpty(culture))
+    {
+      args = new string[] { "-l", dllLocation };
+    }
+    else
+    {
+      args = new string[] { "-l", dllLocation, "-c", culture };
+    }
+
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+    List<string> results = new List<string>(lines[0..^1]);
+    Assert.Equal(8, lines.Length); // one extra closing test line is returned
+    // most recent 2 entries
+    Assert.Equal(expectedResult, results);
+    Assert.StartsWith("6 Entries shown from the", lines[7]);
   }
 
   [Theory]
@@ -1874,6 +2121,20 @@ public class EventLogMonitorTests
     Assert.Equal("4957F: Windows Firewall did not apply the following rule: [06/02/2022 15:57:02.961]", lines[3].TrimEnd());
     // tail
     Assert.StartsWith("4 Entries shown from the", lines[4]);
+  }
+
+  static bool EventLogSourceExists(string entry)
+  {
+    string? dll = Registry.GetValue("HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\EventLog\\" + entry, "EventMessageFile", null) as string;
+    if (!string.IsNullOrEmpty(dll))
+    {
+      bool exists = File.Exists(dll);
+      if (exists)
+      {
+        return true;
+      }
+    }
+    return false;
   }
 }
 

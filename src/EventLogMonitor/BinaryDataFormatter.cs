@@ -79,7 +79,7 @@ public static class BinaryDataFormatter
     message = message.Replace('\0', ' '); // strip embedded nulls
     message = message.TrimEnd(iTrimChars); // remove junk
     Console.ForegroundColor = ConsoleColor.DarkCyan;
-    Console.WriteLine(message + ". Index: " + index);
+    Console.Write(message + ". Index: " + index + "\n");
     Console.ResetColor();
 
     return true;
@@ -260,7 +260,7 @@ public static class BinaryDataFormatter
     }
     Console.ForegroundColor = ConsoleColor.DarkCyan;
     Console.Write(buffer.ToString());
-    Console.WriteLine("Index: " + index);
+    Console.Write("Index: " + index + "\n");
     Console.ResetColor();
     return true;
   }
@@ -273,7 +273,7 @@ public static class BinaryDataFormatter
   private static bool OutputNoDataError(long index)
   {
     Console.ForegroundColor = ConsoleColor.DarkCyan;
-    Console.WriteLine("<Entry has no binary data>. Index: " + index);
+    Console.Write("<Entry has no binary data>. Index: " + index + "\n");
     Console.ResetColor();
     return false;
   }

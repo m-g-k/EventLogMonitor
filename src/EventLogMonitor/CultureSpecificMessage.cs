@@ -261,14 +261,16 @@ namespace EventLogMonitor
               // The system cannot find message text for message number 0x%1 in the message file for %2.
               // AKA - yet another message not found in dll error code!
 
-              // try again with US English if we have not already.
-              if (currentCulture is not USEnglishLCID and not 0)
+              // try again with US English if we have not already tried.
+              if ((currentCulture is 0 && cultureLCID is 0) ||
+                  (currentCulture is not USEnglishLCID and not 0))
               {
+                // if we failed zero, next try with En-US instead
                 currentCulture = USEnglishLCID;
                 continue;
               }
 
-              if (currentCulture != 0)
+              if (currentCulture is not 0 && cultureLCID is not 0)
               {
                 // final attempt to find a message
                 currentCulture = 0;

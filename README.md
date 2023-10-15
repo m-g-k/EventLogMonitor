@@ -2,10 +2,11 @@
 EventLogMonitor is a tool that allows you to view and tail events from the Windows Event Log at the command line.
 
 This tool was originally written around 10 years ago to work with the IBM WebSphere Message Broker product and subsequent releases, and this is reflected in some of the defaults the tool still uses today. However, it also can be used to monitor events written by any program that writes to the Event Log.
+
 ## Installation
 No real installation is required - simply unzip the download and copy the **EventLogMonitor.exe** application and **EventLogMonitor.pdb** into a folder on your path. There are two versions of the tool to choose from
- * a "smaller" **EventLogMonitor-vX-without-framework.zip** version that requires that you have the [.NET 6 Runtime framework](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) installed as a pre-req.
- * a "larger" **EventLogMonitor-vX-with-framework.zip** version that is self-contained and does not require any pre-reqs.
+* a "smaller" **EventLogMonitor-vX-without-framework.zip** version that requires that you have the [.NET 6 Runtime framework](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) installed as a pre-req.
+* a "larger" **EventLogMonitor-vX-with-framework.zip** version that is self-contained and does not require any pre-reqs.
 
  Simply pick the latest version that matches your environment from the [releases](https://github.com/m-g-k/EventLogMonitor/releases) page on GitHub. The functionality of both versions is the same.
 
@@ -50,6 +51,7 @@ You can choose the log to view by specifying the log name with `-l`. To change f
 `Press <Enter>, 'Q' or <Esc> to exit or press 'S' for current stats...`
 
 Of course, you can also combine `-l` with `-s` as you would expect to view a specific source or multiple sources from the chosen log.
+
 ## Viewing previous events in an Event Log
 When starting to tail a log it is often useful to view a few previous entries that have already been written to the log to understand what has already happened before new events start to appear. This also helps to make sure you have spelt your event source name correctly. To do this we use the `-p` option to display previous events along with a count of how many events should be displayed like this:<br>
 
@@ -141,18 +143,25 @@ If you need to find a log and know a few characters from its name, you can filte
 
 Now we can see by specifying `-l app` we have cut down the output from over 141 log providers to just 12. Note that we can specify multiple providers with a comma as in `-l "app, hyper"` or use an `*` to explicitly request all logs.
 
+## Exporting Events using the Event Viewer
+Sometimes it is necessary to export events from one machine into an `.evtx` file to view on a different machine. To do this, follow the [Exporting Events](docs\ExportingEvents.md) instructions.
+
 ## Viewing an exported log file
-You can also use the `-l` option to view the events in an exported event log file, rather than an actual event log. For example:<br>
+To view the events in an exported event log file, rather than an active event log, you use the `-l` option. For example:<br>
 
 `EventLogMonitor -l c:\temp\WonderApp.evtx -p *`<br>
 `...`<br>
 `5 Entries shown from the c:\temp\WonderApp.evtx log matching the event source '*'.`<br>
 
-Note that when using an event log file, the default is to show the entire contents of the log file. To show fewer entries use the `-p` option with a value, e.g. `-p 10`. Also note that tailing is automatically disabled when viewing a file. All the other options such as `-s` along with the other viewing options described below work on event log files.
+Note that when using an event log file, the default is to show the entire contents of the log file. To show fewer entries use the `-p` option with a value, e.g. `-p 10`. Also note that tailing is automatically disabled when viewing a file. All the other options such as `-s`, along with the other viewing options, such as the filtering choices described below, work on event log files.
 
 To see more examples of using event log files, look at some of the tests for EventLogMonitor which use exported log files extensively to ensure consistent output.
 
-When using event log files exported from a different machine, it may be necessary to copy the message catalogue `.dll` (or `.exe` in a few cases) file from the source machine to the one being used to read the log file in order to be able to read the events properly. Simply place the `.dll` file into the same folder as the log file itself and give it the same name as the log file, but with a .dll extension. For example for, if you have an exported log in the temp folder called `c:\temp\WonderApp.evtx`, place the message catalogue dll into the `c:\temp` folder and call it  `c:\temp\WonderApp.dll` and the EventLogMonitor will use this file when reading the log to display the events.
+When using event log files exported from a different machine there are two options to see the contents of the events:
+
+1. If you have exported display information with the event log file, make sure you copy the `LocaleMetaData` folder and the `.MTA` files inside it along with the exported `.evtx` file to the viewing machine. In this case the `LocaleMetaData` folder must be in the same folder as the `.extx` file and the there must be an `.MTA` file with event display information that matches your current nachines display language in the folder. For more information see the [Exporting Events](docs\ExportingEvents.md) documentation.
+
+2. An alternative to using `.MTA` files is to copy the message catalogue `.dll` (or `.exe` in a few cases) file from the source machine, to the one being used to read the log file, in order to be able to read the events properly. Simply place the `.dll` file into the same folder as the log file itself and rename it to have same name as the log file, but with a .dll extension. For example for, if you have an exported log in the temp folder called `c:\temp\WonderApp.evtx`, place the message catalogue dll into the `c:\temp` folder and call it  `c:\temp\WonderApp.dll`. EventLogMonitor will then use this file when reading the log to display the events. In this case the `LocaleMetaData` and the `.MTA` files are not needed and should not in the same folder as the `.evtx` file, as if both are present an `.MTA` file may take precedence.
 
 Remember, an exported event log file cannot be tailed but you can use the `-s` option amongst others to view a subset of events in the log file.
 
@@ -198,6 +207,7 @@ Some applications can produce a large amount of events in the Event Log and give
 `EventLogMonitor.exe -p * -s <your source> -fi "your text here"`<br>
 
 Note that this filter is applied after any `-2` or `-3` option.
+
 ### "Filter eXclude"
 `-fx` will output only those events that do not include the specified text in the message. Use quotes to exclude text that contains a space, for example:<br>
 
@@ -242,7 +252,7 @@ In order to mix inclusive value and exclusive values in the same filter you also
 
 `EventLogMonitor.exe -p * -l System -fc`<br>
 
-If necessary, the `-fi` and `-fx` options can be combined by specifying both options. If both are present, the `-fi` is always run first, then the `-fx` filter is run afterwards. 
+If necessary, the `-fi` and `-fx` options can be combined by specifying both options. If both are present, the `-fi` is always run first, then the `-fx` filter is run afterwards.
 
 If more than one of `-fw`, `-fe` or `-fc` options are used together, then `-fc` takes precedence over `-fe` which takes precedence over `-fw`.
 
@@ -250,7 +260,7 @@ Note that when viewing previous events with the `-p` option, the `-fi` and `-fx`
 
 ### Filter Precedence
 If multiple different filters types are used together, the precedence is:
-1. `-fn` 
+1. `-fn`
 2. `-fc`
 3. `-fe`
 4. `-fw`
@@ -351,21 +361,21 @@ The tool supports redirecting the output to a file with the standard shell redir
 When redirecting output to a file, you can still press `<Enter>`, `'Q'` or `<Esc>` to exit or press `'S'` for current stats, although the stats output message will also be redirected to the file.
 
 ## Viewing output in a different language
-You can use the `-c <culture>` option to change the culture (or language) used to output the language. Any valid culture is allowed as long as the message catalogue for the event contains the message in the chosen language. Valid values for `-c` include:
-* `De-DE`
-* `En-GB`
-* `En-US`
-* `Es-ES`
-* `Fr-FR`
-* `It-IT`
-* `Ja-JP`
-* `Ko-KR`
-* `Pl-PL`
-* `Pt-BR`
-* `Ru-RU`
-* `Tr-TR`
-* `Zh-CN`
-* `Zh-TW`
+You can use the `-c <culture>` option to change the culture (or language) used to output the language. Any valid culture is allowed as long as the message catalogue for the event contains the message in the chosen language. The values should be specified as strings which is the prefered usage. However, they can also be specified as as decimal or as hex LCID values if required for testing. Valid values for `-c` include:
+* `De-DE` or `1031` or `0x407` for German
+* `En-GB` or `2057` or `0x809` for English (United Kingdom)
+* `En-US` or `1033` or `0x409` for English (United States)
+* `Es-ES` or `3082` or `0xC0A` for Spanish
+* `Fr-FR` or `1036` or `0x40C` for French
+* `It-IT` or `1040` or `0x410` for Italian
+* `Ja-JP` or `1041` or `0x411` for Japanese
+* `Ko-KR` or `1042` or `0x412` for Korean
+* `Pl-PL` or `1045` or `0x415` for Polish
+* `Pt-BR` or `1046` or `0x416` for Portuguese (Brazil)
+* `Ru-RU` or `1049` or `0x419` for Russian
+* `Tr-TR` or `1055` or `0x41F` for Turkish
+* `Zh-CN` or `2052` or `0x804` for Chinese (Simplified)
+* `Zh-TW` or `1028` or `0x404` for Chinese (Traditional)
 
 Note that you may need to use a Unicode font to be able to display certain languages in your terminal.
 

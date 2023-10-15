@@ -27,6 +27,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace EventLogMonitor;
 
@@ -38,7 +39,13 @@ public class EventLogMonitor
   [DllImport("kernel32.dll")]
   static extern ushort GetThreadLocale();
 
+  [DllImport(@"kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  static extern int LCIDToLocaleName(uint locale, StringBuilder lpName, int cchName, int dwFlags);
+
+  private static readonly bool outputLCID = Environment.GetEnvironmentVariable("EVENTLOGMONITOR_OUTPUT_LCID") != null;
   private static volatile int s_entriesDisplayed = 0;
+
+  private const int LOCALE_ALLOW_NEUTRAL_NAMES = 0x08000000;
   public EventLogMonitor()
   {
 
@@ -322,10 +329,47 @@ public class EventLogMonitor
     if (iCultureSet)
     {
       bool isValidCulture;
+      bool isNumber = false;
       try
       {
-        iChosenCulture = CultureInfo.CreateSpecificCulture(iDefaultCulture);
-        if (iChosenCulture.LCID == 127)
+        // allow LCIDs to be specified directly as numbers
+        int defaultCultureAsLCID = -1;
+        try
+        {
+          int numbase = 10;
+          if (iDefaultCulture.ToLower().StartsWith("0x"))
+          {
+            numbase = 16;
+          }
+          defaultCultureAsLCID = Convert.ToInt32(iDefaultCulture, numbase);
+          if (defaultCultureAsLCID >= 0)
+          {
+            isNumber = true;
+            StringBuilder cultureName = new(100);
+            int result = LCIDToLocaleName((uint)defaultCultureAsLCID, cultureName, cultureName.Capacity, LOCALE_ALLOW_NEUTRAL_NAMES);
+            if (result == 0)
+            {
+              // Console.WriteLine("ERROR: GLE = {0}", Marshal.GetLastWin32Error());
+              cultureName.Append("Unknown");
+            }
+            
+            iChosenCultureName = cultureName.ToString();
+            iChosenCultureLCID = defaultCultureAsLCID;
+          }
+        }
+        catch (Exception)
+        {
+          isNumber = false;
+        }
+
+        if (!isNumber)
+        {
+          CultureInfo tmp = CultureInfo.CreateSpecificCulture(iDefaultCulture);
+          iChosenCultureLCID = tmp.LCID;
+          iChosenCultureName = tmp.Name;
+        }
+
+        if (iChosenCultureLCID == 127)
         {
           isValidCulture = false; // 127 is invarient culture which is no use to us
         }
@@ -343,7 +387,8 @@ public class EventLogMonitor
       if (!isValidCulture)
       {
         Console.WriteLine("Culture is not supported. '" + iDefaultCulture + "' is an invalid culture identifier. Defaulting to 'En-US'.");
-        iChosenCulture = iUSDefaultCulture;
+        iChosenCultureLCID = iUSDefaultCulture.LCID;
+        iChosenCultureName = iUSDefaultCulture.Name;
       }
     }
     return true;
@@ -547,7 +592,7 @@ public class EventLogMonitor
       if (iPreviousRecordCount == 0)
       {
         // showing 0 events from a file is not much use so default to showing all events
-        iPreviousRecordCount = uint.MaxValue; 
+        iPreviousRecordCount = uint.MaxValue;
       }
     }
 
@@ -766,8 +811,9 @@ public class EventLogMonitor
       }
     }
 
-    String message = string.Empty;
-    String win32Message = String.Empty;
+    string message = string.Empty;
+    string win32Message = string.Empty;
+    int lcidUsed = -1;
     try
     {
 
@@ -777,37 +823,47 @@ public class EventLogMonitor
         // however, this may not be available so the message may not be found
         // This is works best when the user has provided a DLL along side an EVTX
         CultureSpecificMessage.EventLogRecordWrapper wrapper = new(entry);
-        message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, iChosenCulture.LCID, iChosenCulture.Name);
-
+        message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, iChosenCultureLCID, iChosenCultureName);
         if (string.IsNullOrEmpty(message))
         {
-          // try again with the thread set to the requested culture instead - but must reset
+          // try again with the thread set to the requested culture - but must reset
+          // this will pick up any MTA files
           ushort origLCID = (ushort)GetThreadLocale();
           try
           {
-            SetThreadLocale((ushort)iChosenCulture.LCID);
+            SetThreadLocale((ushort)iChosenCultureLCID);
             message = entry.FormatDescription();
+            lcidUsed = iChosenCultureLCID;
           }
           finally
           {
             SetThreadLocale(origLCID);
           }
         }
+        else
+        {
+          lcidUsed = iChosenCultureLCID;
+        }
 
       }
       else
       {
-        // Get the message is the catalogue is correct and present in the registry or there is an MTA file along with the EVTX
+        // Get the message if the catalogue is correct and present in the registry or there is an MTA file along with the EVTX
         message = entry.FormatDescription();
-
-        // retry with US culture as this tries different places to find a catalogue and will override the console culture
+        // retry with alternate culture lookup as this tries different places to find a catalogue and will override the console culture
         if (string.IsNullOrEmpty(message))
         {
-          // try to get the specific language version of the message.
-          // however, this may not be available so the message may not be found
-          // This will work when the user has provided a DLL alongside the EVTX
+          // try with a Language Neutral (0) culture but with En-US name to mimic what C# does by default which seems to
+          // be to call FormatMessage with a Lang Neutral (0) and so will prefer 0 above other LCIDs!
+          // this will fall back to trying En-US if Language Neutral (0) fails to find a match and
+          // will work when the user has provided a DLL alongside an EVTX which has neutral or US messages in it
           CultureSpecificMessage.EventLogRecordWrapper wrapper = new(entry);
-          message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, iUSDefaultCulture.LCID, iUSDefaultCulture.Name);
+          message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, 0, iUSDefaultCulture.Name);
+          lcidUsed = iUSDefaultCulture.LCID;
+        }
+        else
+        {
+          lcidUsed = GetThreadLocale();
         }
       }
 
@@ -820,6 +876,14 @@ public class EventLogMonitor
         {
           SetThreadLocale((ushort)iUSDefaultCulture.LCID); // force US
           message = entry.FormatDescription();
+          if (string.IsNullOrEmpty(message))
+          {
+            lcidUsed = -1;
+          }
+          else
+          {
+            lcidUsed = iUSDefaultCulture.LCID;
+          }
         }
         finally
         {
@@ -833,6 +897,7 @@ public class EventLogMonitor
       // get the internal exception code as 1168 means we probably have an invalid MTA file
       // TODO check and use code
       int exceptionCode = e.GetFieldValue<int>("_errorCode");
+      lcidUsed = -1;
       //Console.WriteLine($"EXCEPTION CODE: {exceptionCode}"); // debug
       //Console.WriteLine(e.ToString());  // debug
       win32Message = e.Message; // used if there are no qualifiers on the message ID
@@ -1032,6 +1097,11 @@ public class EventLogMonitor
         Console.Write(" Win32Msg: {0} ({1}).", win32Message, entry.Id);
       }
 
+      if (outputLCID && lcidUsed >= 0)
+      {
+        Console.Write(" LCID: {0}.", lcidUsed);
+      }
+
       Console.WriteLine(); // finish with a blank line
       Console.ResetColor();
     }
@@ -1224,7 +1294,8 @@ public class EventLogMonitor
   private uint iRecordIndexMax = 0;
   private uint iRecordIndexRange = 0;
   private uint iPreviousRecordCount = 0;
-  private CultureInfo iChosenCulture = null;
+  private int iChosenCultureLCID = 0;
+  private string iChosenCultureName = "";
   private CultureInfo iUSDefaultCulture = null;
   private EventLogQuery iEventLogQuery = null;
   private bool iDisplayLogs;
