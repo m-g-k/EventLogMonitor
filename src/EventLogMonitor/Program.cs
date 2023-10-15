@@ -28,6 +28,7 @@ using System.Threading;
 using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System.Xml;
 
 namespace EventLogMonitor;
 
@@ -63,6 +64,7 @@ public class EventLogMonitor
     myArgs.SetOptionalBooleanArgument("-b2");
     myArgs.SetOptionalBooleanArgument("-nt");
     myArgs.SetOptionalBooleanArgument("-tf");
+    myArgs.SetOptionalBooleanArgument("-utc");
     myArgs.SetOptionalBooleanArgument("-d");
     myArgs.SetOptionalFlaggedArgument("-i");
     myArgs.SetOptionalFlaggedArgument("-s");
@@ -195,10 +197,14 @@ public class EventLogMonitor
       iTailEventLog = false;
     }
 
-    bool tsFirst = myArgs.GetBooleanArgument("-tf");
-    if (tsFirst)
+    if (myArgs.GetBooleanArgument("-tf"))
     {
       iTimestampFirst = true;
+    }
+
+    if (myArgs.GetBooleanArgument("-utc"))
+    {
+      iTimestampInUTC = true;
     }
 
     iDisplayLogs = myArgs.GetBooleanArgument("-d");
@@ -352,7 +358,7 @@ public class EventLogMonitor
               // Console.WriteLine("ERROR: GLE = {0}", Marshal.GetLastWin32Error());
               cultureName.Append("Unknown");
             }
-            
+
             iChosenCultureName = cultureName.ToString();
             iChosenCultureLCID = defaultCultureAsLCID;
           }
@@ -1028,7 +1034,15 @@ public class EventLogMonitor
     if (iTimestampFirst)
     {
       Console.ForegroundColor = ConsoleColor.White;
-      Console.Write(entry.TimeCreated + "." + entry.TimeCreated.Value.Millisecond + ": ");
+      if (iTimestampInUTC)
+      {
+        outputTimestampInUTC(entry, true);
+      }
+      else
+      {
+        Console.Write(entry.TimeCreated + "." + entry.TimeCreated.Value.Millisecond + ": ");
+      }
+
       Console.ResetColor();
     }
 
@@ -1054,7 +1068,15 @@ public class EventLogMonitor
     if (!iTimestampFirst)
     {
       Console.ForegroundColor = ConsoleColor.White;
-      Console.Write(" [" + entry.TimeCreated + "." + entry.TimeCreated.Value.Millisecond + "]\n");
+      if (iTimestampInUTC)
+      {
+        outputTimestampInUTC(entry, false);
+      }
+      else
+      {
+        Console.Write(" [" + entry.TimeCreated + "." + entry.TimeCreated.Value.Millisecond + "]\n");
+      }
+
       Console.ResetColor();
     }
     else
@@ -1289,6 +1311,7 @@ public class EventLogMonitor
   private string iEntryEventIdAndLogLevelQuery = null; // query must be null to represent no query by default
   private bool iCultureSet = false;
   private bool iTimestampFirst = false;
+  private bool iTimestampInUTC = false;
   private uint iOriginalIndex = 0;
   private uint iRecordIndexMin = 0;
   private uint iRecordIndexMax = 0;
@@ -1307,12 +1330,12 @@ public class EventLogMonitor
     Console.WriteLine("EventLogMonitor : Version {0} : https://github.com/m-g-k/EventLogMonitor", GetProductVersion());
     Console.WriteLine("Usage:");
     Console.WriteLine("  Usage 1 : EventLogMonitor [-p <count>] [-1|-2|-3] [-s <src>] [-nt] [-v]");
-    Console.WriteLine("                            [-b1] [-b2] [-l <log>] [-c <culture>] [-tf]");
+    Console.WriteLine("                            [-b1] [-b2] [-l <log>] [-c <culture>] [-tf] [-utc]");
     Console.WriteLine("                            [-fi <filt>] [-fx <filt>] [-fn <IDs>] [-fw|-fe|-fc]");
     Console.WriteLine("  Usage 2 : EventLogMonitor -i index [-v] [p <count>] [-c <culture>]");
     Console.WriteLine("                            [-b1] [-b2] [-fi <filt>] [-fx <filt>] [-fn <IDs>]");
     Console.WriteLine("                            [-fw | -fe | -fc]");
-    Console.WriteLine("                            [-1|-2|-3] [-l <log>] [-tf]");
+    Console.WriteLine("                            [-1|-2|-3] [-l <log>] [-tf] [-utc]");
     Console.WriteLine("  Usage 3 : EventLogMonitor -d [-v] [-l <log>]");
     Console.WriteLine("Examples:");
     Console.WriteLine("  EventLogMonitor -p * -s *");
@@ -1361,6 +1384,7 @@ public class EventLogMonitor
     Console.WriteLine("  -fn Specify -fn <id_filter> to only show entries with the specified IDs.");
     Console.WriteLine("      The ID filter supports included, excluded and ranges of event IDs. For");
     Console.WriteLine("      details see: https://github.com/m-g-k/EventLogMonitor#filter-on-event-id");
+    Console.WriteLine("  -utc Display the timestamp as UTC.");
     Console.WriteLine("  -version - displays the version of this tool.");
     Console.WriteLine("  -? or -help - displays this help.");
     Console.WriteLine("Notes:");
@@ -1494,6 +1518,45 @@ public class EventLogMonitor
   {
     // if it looks like a file...
     return !string.IsNullOrEmpty(logName) && (logName.Contains(':') || logName.Contains('\\') || logName.Contains('.'));
+  }
+
+  private static void outputTimestampInUTC(EventRecord entry, bool first)
+  {
+    var entryAsXml = entry.ToXml();
+
+    // quick hack to grab the timestamp out of the XML
+    var timeSearch = "<TimeCreated SystemTime='";
+    int startPos = entryAsXml.IndexOf(timeSearch);
+    if (startPos > 0)
+    {
+      int endPos = entryAsXml.IndexOf("'/>", startPos);
+      if (endPos > 0)
+      {
+        var begin = startPos + timeSearch.Length;
+        var length = endPos - begin;
+        var rawTimeStamp = entryAsXml.Substring(begin, length);
+        var dt = XmlConvert.ToDateTime(rawTimeStamp, XmlDateTimeSerializationMode.Utc);
+        if (first)
+        {
+          Console.Write(dt + "." + dt.Millisecond + ": ");
+        }
+        else
+        {
+          Console.Write(" [" + dt + "." + dt.Millisecond + "]\n");
+        }
+        return;
+      }
+    }
+
+    // fall back if the xml does not find a match
+    if (first)
+    {
+      Console.Write(entry.TimeCreated + "." + entry.TimeCreated.Value.Millisecond + ": ");
+    }
+    else
+    {
+      Console.Write(" [" + entry.TimeCreated + "." + entry.TimeCreated.Value.Millisecond + "]\n");
+    }
   }
 
   private static bool LogNameMatch(string logName, string[] logsToMatch, bool matchAll)

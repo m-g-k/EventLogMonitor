@@ -176,101 +176,101 @@ public class EventLogMonitorTests
 
   private static readonly List<string> miscMaxResults = new()
   {
-    "2155I: ( Msg 2155 ) [MAX(FFFF)] Message 2155 in LCID FFFF (MAX). Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
-    "3132W: ( Msg 3132 ) [MAX(FFFF)] Message 3132 in LCID FFFF (MAX). Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
-    "2208E: ( Msg 2208 ) [MAX(FFFF)] Message 2208 in LCID FFFF (MAX). Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "2155I: ( Msg 2155 ) [MAX(FFFF)] Message 2155 in LCID FFFF (MAX). Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.420]",
+    "3132W: ( Msg 3132 ) [MAX(FFFF)] Message 3132 in LCID FFFF (MAX). Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.422]",
+    "2208E: ( Msg 2208 ) [MAX(FFFF)] Message 2208 in LCID FFFF (MAX). Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
     "namarie. Index: 874790",
-    "1234I: ( Msg 1234 ) [MAX(FFFF)] Message 1234 in LCID FFFF (MAX). Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
-    "1234I: ( Msg 1234 ) [MAX(FFFF)] Message 1234 in LCID FFFF (MAX). Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
-    "1234I: ( Msg 1234 ) [MAX(FFFF)] Message 1234 in LCID FFFF (MAX). Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+    "1234I: ( Msg 1234 ) [MAX(FFFF)] Message 1234 in LCID FFFF (MAX). Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
+    "1234I: ( Msg 1234 ) [MAX(FFFF)] Message 1234 in LCID FFFF (MAX). Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.426]",
+    "1234I: ( Msg 1234 ) [MAX(FFFF)] Message 1234 in LCID FFFF (MAX). Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.428]"
   };
 
   private static readonly List<string> miscUKResults = new()
   {
-    "2155I: ( Msg 2155 ) [English GB(2057)] Message 2155 in En-GB. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
-    "3132W: ( Msg 3132 ) [English GB(2057)] Message 3132 in En-GB. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
-    "2208E: ( Msg 2208 ) [English GB(2057)] Message 2208 in En-GB. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "2155I: ( Msg 2155 ) [English GB(2057)] Message 2155 in En-GB. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.420]",
+    "3132W: ( Msg 3132 ) [English GB(2057)] Message 3132 in En-GB. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.422]",
+    "2208E: ( Msg 2208 ) [English GB(2057)] Message 2208 in En-GB. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
     "namarie. Index: 874790",
-    "1234I: ( Msg 1234 ) [English GB(2057)] Message 1234 in En-GB. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
-    "1234I: ( Msg 1234 ) [English GB(2057)] Message 1234 in En-GB. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
-    "1234I: ( Msg 1234 ) [English GB(2057)] Message 1234 in En-GB. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+    "1234I: ( Msg 1234 ) [English GB(2057)] Message 1234 in En-GB. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
+    "1234I: ( Msg 1234 ) [English GB(2057)] Message 1234 in En-GB. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.426]",
+    "1234I: ( Msg 1234 ) [English GB(2057)] Message 1234 in En-GB. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.428]"
   };
 
   private static readonly List<string> miscFrenchResults = new()
   {
-    "2155I: ( Msg 2155 ) [French(1036)] Message 2155 in French. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
-    "3132W: ( Msg 3132 ) [French(1036)] Message 3132 in French. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
-    "2208E: ( Msg 2208 ) [French(1036)] Message 2208 in French. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "2155I: ( Msg 2155 ) [French(1036)] Message 2155 in French. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.420]",
+    "3132W: ( Msg 3132 ) [French(1036)] Message 3132 in French. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.422]",
+    "2208E: ( Msg 2208 ) [French(1036)] Message 2208 in French. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
     "namarie. Index: 874790",
-    "1234I: ( Msg 1234 ) [French(1036)] Message 1234 in French. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
-    "1234I: ( Msg 1234 ) [French(1036)] Message 1234 in French. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
-    "1234I: ( Msg 1234 ) [French(1036)] Message 1234 in French. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]",
+    "1234I: ( Msg 1234 ) [French(1036)] Message 1234 in French. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
+    "1234I: ( Msg 1234 ) [French(1036)] Message 1234 in French. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.426]",
+    "1234I: ( Msg 1234 ) [French(1036)] Message 1234 in French. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.428]",
   };
 
   private static readonly List<string> miscUSResults = new()
   {
-    "2155I: ( Msg 2155 ) [English US(1033)] Message 2155 in En-US. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
-    "3132W: ( Msg 3132 ) [English US(1033)] Message 3132 in En-US. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
-    "2208E: ( Msg 2208 ) [English US(1033)] Message 2208 in En-US. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "2155I: ( Msg 2155 ) [English US(1033)] Message 2155 in En-US. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.420]",
+    "3132W: ( Msg 3132 ) [English US(1033)] Message 3132 in En-US. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.422]",
+    "2208E: ( Msg 2208 ) [English US(1033)] Message 2208 in En-US. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
     "namarie. Index: 874790",
-    "1234I: ( Msg 1234 ) [English US(1033)] Message 1234 in En-US. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
-    "1234I: ( Msg 1234 ) [English US(1033)] Message 1234 in En-US. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
-    "1234I: ( Msg 1234 ) [English US(1033)] Message 1234 in En-US. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+    "1234I: ( Msg 1234 ) [English US(1033)] Message 1234 in En-US. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
+    "1234I: ( Msg 1234 ) [English US(1033)] Message 1234 in En-US. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.426]",
+    "1234I: ( Msg 1234 ) [English US(1033)] Message 1234 in En-US. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.428]"
   };
 
   private static readonly List<string> miscGermanResults = new()
   {
-    "2155I: ( Msg 2155 ) [German(1031)] Message 2155 in German. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
-    "3132W: ( Msg 3132 ) [German(1031)] Message 3132 in Gernam. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
-    "2208E: ( Msg 2208 ) [German(1031)] Message 2208 in German. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "2155I: ( Msg 2155 ) [German(1031)] Message 2155 in German. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.420]",
+    "3132W: ( Msg 3132 ) [German(1031)] Message 3132 in Gernam. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.422]",
+    "2208E: ( Msg 2208 ) [German(1031)] Message 2208 in German. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
     "namarie. Index: 874790",
-    "1234I: ( Msg 1234 ) [German(1031)] Message 1234 in German. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
-    "1234I: ( Msg 1234 ) [German(1031)] Message 1234 in German. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
-    "1234I: ( Msg 1234 ) [German(1031)] Message 1234 in German. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+    "1234I: ( Msg 1234 ) [German(1031)] Message 1234 in German. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
+    "1234I: ( Msg 1234 ) [German(1031)] Message 1234 in German. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.426]",
+    "1234I: ( Msg 1234 ) [German(1031)] Message 1234 in German. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.428]"
   };
 
   private static readonly List<string> miscDanishResults = new()
   {
-    "2155I: ( Msg 2155 ) [Danish(1030)] Message 2155 in Danish. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
-    "3132W: ( Msg 3132 ) [Danish(1030)] Message 3132 in Danish. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
-    "2208E: ( Msg 2208 ) [Danish(1030)] Message 2208 in Danish. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "2155I: ( Msg 2155 ) [Danish(1030)] Message 2155 in Danish. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.420]",
+    "3132W: ( Msg 3132 ) [Danish(1030)] Message 3132 in Danish. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.422]",
+    "2208E: ( Msg 2208 ) [Danish(1030)] Message 2208 in Danish. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
     "namarie. Index: 874790",
-    "1234I: ( Msg 1234 ) [Danish(1030)] Message 1234 in Danish. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
-    "1234I: ( Msg 1234 ) [Danish(1030)] Message 1234 in Danish. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
-    "1234I: ( Msg 1234 ) [Danish(1030)] Message 1234 in Danish. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+    "1234I: ( Msg 1234 ) [Danish(1030)] Message 1234 in Danish. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
+    "1234I: ( Msg 1234 ) [Danish(1030)] Message 1234 in Danish. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.426]",
+    "1234I: ( Msg 1234 ) [Danish(1030)] Message 1234 in Danish. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.428]"
   };
 
   private static readonly List<string> miscDutchResults = new()
   {
-    "2155I: ( Msg 2155 ) [Dutch(19)] Message 2155 in Dutch. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
-    "3132W: ( Msg 3132 ) [Dutch(19)] Message 3132 in Dutch. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
-    "2208E: ( Msg 2208 ) [Dutch(19)] Message 2208 in Dutch. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "2155I: ( Msg 2155 ) [Dutch(19)] Message 2155 in Dutch. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.420]",
+    "3132W: ( Msg 3132 ) [Dutch(19)] Message 3132 in Dutch. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.422]",
+    "2208E: ( Msg 2208 ) [Dutch(19)] Message 2208 in Dutch. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
     "namarie. Index: 874790",
-    "1234I: ( Msg 1234 ) [Dutch(19)] Message 1234 in Dutch. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
-    "1234I: ( Msg 1234 ) [Dutch(19)] Message 1234 in Dutch. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
-    "1234I: ( Msg 1234 ) [Dutch(19)] Message 1234 in Dutch. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+    "1234I: ( Msg 1234 ) [Dutch(19)] Message 1234 in Dutch. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
+    "1234I: ( Msg 1234 ) [Dutch(19)] Message 1234 in Dutch. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.426]",
+    "1234I: ( Msg 1234 ) [Dutch(19)] Message 1234 in Dutch. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.428]"
   };
 
   private static readonly List<string> miscArabicResults = new()
   {
-    "2155I: ( Msg 2155 ) [Arabic(1)] Message 2155 in Arabic. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
-    "3132W: ( Msg 3132 ) [Arabic(1)] Message 3132 in Arabic. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
-    "2208E: ( Msg 2208 ) [Arabic(1)] Message 2208 in Arabic. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "2155I: ( Msg 2155 ) [Arabic(1)] Message 2155 in Arabic. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.420]",
+    "3132W: ( Msg 3132 ) [Arabic(1)] Message 3132 in Arabic. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.422]",
+    "2208E: ( Msg 2208 ) [Arabic(1)] Message 2208 in Arabic. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
     "namarie. Index: 874790",
-    "1234I: ( Msg 1234 ) [Arabic(1)] Message 1234 in Arabic. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
-    "1234I: ( Msg 1234 ) [Arabic(1)] Message 1234 in Arabic. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
-    "1234I: ( Msg 1234 ) [Arabic(1)] Message 1234 in Arabic. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+    "1234I: ( Msg 1234 ) [Arabic(1)] Message 1234 in Arabic. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
+    "1234I: ( Msg 1234 ) [Arabic(1)] Message 1234 in Arabic. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.426]",
+    "1234I: ( Msg 1234 ) [Arabic(1)] Message 1234 in Arabic. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.428]"
   };
 
   private static readonly List<string> miscLanguageNeutralResults = new()
   {
-    "2155I: ( Msg 2155 ) [LanguageNeutral(0)] Message 2155 in LanguageNeutral 0. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.420]",
-    "3132W: ( Msg 3132 ) [LanguageNeutral(0)] Message 3132 in LanguageNeutral 0. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.422]",
-    "2208E: ( Msg 2208 ) [LanguageNeutral(0)] Message 2208 in LanguageNeutral 0. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
+    "2155I: ( Msg 2155 ) [LanguageNeutral(0)] Message 2155 in LanguageNeutral 0. Insert 2: 'Information Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.420]",
+    "3132W: ( Msg 3132 ) [LanguageNeutral(0)] Message 3132 in LanguageNeutral 0. Insert 2: 'Warning Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.422]",
+    "2208E: ( Msg 2208 ) [LanguageNeutral(0)] Message 2208 in LanguageNeutral 0. Insert 2: 'Error Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
     "namarie. Index: 874790",
-    "1234I: ( Msg 1234 ) [LanguageNeutral(0)] Message 1234 in LanguageNeutral 0. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.425]",
-    "1234I: ( Msg 1234 ) [LanguageNeutral(0)] Message 1234 in LanguageNeutral 0. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.426]",
-    "1234I: ( Msg 1234 ) [LanguageNeutral(0)] Message 1234 in LanguageNeutral 0. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 16:36:04.428]"
+    "1234I: ( Msg 1234 ) [LanguageNeutral(0)] Message 1234 in LanguageNeutral 0. Insert 2: 'Success Event', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.425]",
+    "1234I: ( Msg 1234 ) [LanguageNeutral(0)] Message 1234 in LanguageNeutral 0. Insert 2: 'Failure Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.426]",
+    "1234I: ( Msg 1234 ) [LanguageNeutral(0)] Message 1234 in LanguageNeutral 0. Insert 2: 'Success Audit', Insert 3: 'Insert Three'. [18/09/2023 15:36:04.428]"
   };
 
   class MiscTestsSpecificData : TheoryData<int, string, string, List<string>>
@@ -1214,13 +1214,14 @@ public class EventLogMonitorTests
     Console.SetOut(output);
 
     string[] args;
+    // force UTC time for this tests as otherwise we are an hour out
     if (String.IsNullOrEmpty(culture))
     {
-      args = new string[] { "-l", dllLocation };
+      args = new string[] { "-l", dllLocation, "-utc" };
     }
     else
     {
-      args = new string[] { "-l", dllLocation, "-c", culture };
+      args = new string[] { "-l", dllLocation, "-c", culture, "-utc" }; 
     }
 
     EventLogMonitor monitor = new();
@@ -1231,7 +1232,7 @@ public class EventLogMonitorTests
     
     // incase of an error, output expected and actual as it's easier to debug
     stdoutput.WriteLine("Test Run Output:");
-    stdoutput.WriteLine(logOut); //orig
+    stdoutput.WriteLine(logOut);
     stdoutput.WriteLine("Expected Count and Output: " + expectedResult.Count);
     foreach(string line in expectedResult) {
       stdoutput.WriteLine(line);
