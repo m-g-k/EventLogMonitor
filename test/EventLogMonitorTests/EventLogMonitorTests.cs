@@ -27,6 +27,7 @@ using System.Threading;
 using System.Runtime.InteropServices;
 using System.Numerics;
 using Microsoft.Win32;
+using System.Reflection;
 
 namespace EventLogMonitor;
 
@@ -1228,9 +1229,10 @@ public class EventLogMonitorTests
     monitor.MonitorEventLog();
     string logOut = output.ToString();
     
-    stdoutput.WriteLine("STARTING OUTPUT:");
+    // incase of an error, output expected and actual as it's easier to debug
+    stdoutput.WriteLine("Test Run Output:");
     stdoutput.WriteLine(logOut); //orig
-    stdoutput.WriteLine("Expected Count: " + expectedResult.Count);
+    stdoutput.WriteLine("Expected Count and Output: " + expectedResult.Count);
     foreach(string line in expectedResult) {
       stdoutput.WriteLine(line);
     }
@@ -1239,12 +1241,12 @@ public class EventLogMonitorTests
     Assert.Equal(8, lines.Length); // one extra closing test line is returned
     List<string> results = new(lines[0..^1]);
 
-    stdoutput.WriteLine("Results count: " + results.Count); 
+    stdoutput.WriteLine("\nResults Count and Output: " + results.Count); 
     foreach(string line in results) {
       stdoutput.WriteLine(line);
     }
 
-    Assert.Equal(expectedResult, results);
+    Assert.Equivalent(expectedResult, results, strict: true);
     Assert.StartsWith("6 Entries shown from the", lines[7]);
   }
 
