@@ -298,10 +298,10 @@ public class EventLogMonitorTests
       Add(8, "en-GB", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscUKResults);            // 2057
       Add(9, "0xFFFF", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscMaxResults);          // 65535
 
-      // now check that we fall back to 0 when we ask for italian even when uk english and us english are present if 0 is present
+      // now check that we fall back to 0 when we ask for italian even when uk english and us english are present if 0 is present (italian not present on purpose)
       Add(10, "it-IT", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscLanguageNeutralResults);
 
-      // now check that we fall back to US when we ask for italian even when uk english and us english are present but 0 is not
+      // now check that we fall back to US when we ask for italian even when uk english and us english are present but 0 is not (italian not present on purpose)
       Add(11, "it-IT", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1, miscUSResults);
 
       // now check that we fall back to US when we ask for uk english and us is present but 0 is not
@@ -324,8 +324,12 @@ public class EventLogMonitorTests
 
       // calling with no culture should give lang neutral if present, or local LCID or US or else lowest numbered LCID
       // see the flow chart in ExportingEvents.md for the rules
+      // Note. As there is no culture specified (on purpose) it is possible for some of these tests to fail if
+      // they are run on a machine with the local set to one that is already present in the dll.
+      // E.G test 21 below fails on US (1033) machines as that takes priority over the 2057 set the thread by the test
+      // unless it is run on a UK (2057) locale machine.
       Add(20, "", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1_0, miscLanguageNeutralResults); // 0
-      Add(21, "", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1, miscUKResults); // 2057
+      // Add(21, "", iMisc_LCID_65535_2057_1036_1033_1031_1030_19_1, miscUKResults); // 2057. Disabled. This fails on US lang machines so breaks when run by github actions
       Add(22, "", iMisc_LCID_65535_1036_1033_1031_1030_19_1, miscUSResults); // 1033
       Add(23, "", iMisc_LCID_65535_1036_1031_1030_19_0, miscLanguageNeutralResults); // 0
       Add(24, "", iMisc_LCID_65535_1036_1031_1030_19_1, miscArabicResults); // 1
@@ -1221,7 +1225,7 @@ public class EventLogMonitorTests
     }
     else
     {
-      args = new string[] { "-l", dllLocation, "-c", culture, "-utc" }; 
+      args = new string[] { "-l", dllLocation, "-c", culture, "-utc" };
     }
 
     EventLogMonitor monitor = new();
@@ -1229,12 +1233,13 @@ public class EventLogMonitorTests
     Assert.True(initialized, $"{initialized} should be true");
     monitor.MonitorEventLog();
     string logOut = output.ToString();
-    
+
     // incase of an error, output expected and actual as it's easier to debug
     stdoutput.WriteLine("Test Run Output:");
     stdoutput.WriteLine(logOut);
     stdoutput.WriteLine("Expected Count and Output: " + expectedResult.Count);
-    foreach(string line in expectedResult) {
+    foreach (string line in expectedResult)
+    {
       stdoutput.WriteLine(line);
     }
 
@@ -1242,8 +1247,9 @@ public class EventLogMonitorTests
     Assert.Equal(8, lines.Length); // one extra closing test line is returned
     List<string> results = new(lines[0..^1]);
 
-    stdoutput.WriteLine("\nResults Count and Output: " + results.Count); 
-    foreach(string line in results) {
+    stdoutput.WriteLine("\nResults Count and Output: " + results.Count);
+    foreach (string line in results)
+    {
       stdoutput.WriteLine(line);
     }
 
