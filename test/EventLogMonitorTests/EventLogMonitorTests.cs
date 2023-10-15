@@ -1227,11 +1227,23 @@ public class EventLogMonitorTests
     Assert.True(initialized, $"{initialized} should be true");
     monitor.MonitorEventLog();
     string logOut = output.ToString();
-    stdoutput.WriteLine(logOut);
+    
+    stdoutput.WriteLine("STARTING OUTPUT:");
+    stdoutput.WriteLine(logOut); //orig
+    stdoutput.WriteLine("Expected Count: " + expectedResult.Count);
+    foreach(string line in expectedResult) {
+      stdoutput.WriteLine(line);
+    }
+
     string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-    List<string> results = new List<string>(lines[0..^1]);
     Assert.Equal(8, lines.Length); // one extra closing test line is returned
-    // most recent 2 entries
+    List<string> results = new(lines[0..^1]);
+
+    stdoutput.WriteLine("Results count: " + results.Count); 
+    foreach(string line in results) {
+      stdoutput.WriteLine(line);
+    }
+
     Assert.Equal(expectedResult, results);
     Assert.StartsWith("6 Entries shown from the", lines[7]);
   }
