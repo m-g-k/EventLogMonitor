@@ -144,7 +144,7 @@ If you need to find a log and know a few characters from its name, you can filte
 Now we can see by specifying `-l app` we have cut down the output from over 141 log providers to just 12. Note that we can specify multiple providers with a comma as in `-l "app, hyper"` or use an `*` to explicitly request all logs.
 
 ## Exporting Events using the Event Viewer
-Sometimes it is necessary to export events from one machine into an `.evtx` file to view on a different machine. To do this, follow the [Exporting Events](docs\ExportingEvents.md) instructions.
+Sometimes it is necessary to export events from one machine into an `.evtx` file to view on a different machine. To do this, follow the [Exporting Events](docs/ExportingEvents.md) instructions.
 
 ## Viewing an exported log file
 To view the events in an exported event log file, rather than an active event log, you use the `-l` option. For example:<br>
@@ -430,6 +430,7 @@ Once your prompt is elevated then all the other options like `-p` and `-3` etc, 
 ## Miscellaneous options
 There are a final few options that have not been covered elsewhere. These are:
 * `-nt` or "No Tailing". If you are only wanting to view existing events, specifying `-nt` will stop the tool tailing the log at the end of the output.
+* `-utc`. Display the event timestamp in UTC time rather than converting it to local time. Local time convertion is the default.
 * `-?` or `-help`. The help commands produce a simplified version of this readme.
 * `-version`. Displays the version of the EventLogMonitor tool being run.
 

@@ -90,8 +90,8 @@ If you have a missing display message error, you should first check your **Windo
 
 `PS C:\temp> GET-WinSystemLocale`
 
-`LCID             Name             DisplayName`
-`----             ----             -----------`
+`LCID             Name             DisplayName`  
+`----             ----             -----------`  
 `2057             en-GB            English (United Kingdom)`
 
 Here we can see that UK English (2057) is the default and so **Event Viewer** will expect a `<log-name>_2057.MTA` file to exist. If there is no `<log-name>_<LCID>.MTA` file in your `LocaleMetaData` folder or there is a file that is very small as described above, you have a few options:
