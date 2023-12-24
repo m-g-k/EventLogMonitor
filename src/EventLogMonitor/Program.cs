@@ -118,7 +118,7 @@ public class EventLogMonitor
       indexSet = true;
       if (index.Contains('-'))
       {
-        char[] match = { '-' };
+        char[] match = ['-'];
         string[] range = index.Split(match, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (range.Length != 2)
         {
@@ -610,7 +610,7 @@ public class EventLogMonitor
     using var reader = new EventLogReader(iEventLogQuery);
 
     //display existing entries before we move onto waiting for new entries to appear
-    List<EventRecord> entries = new();
+    List<EventRecord> entries = [];
     int matched = 0;
     if (iRecordIndexMin > 0)
     {
@@ -1004,8 +1004,16 @@ public class EventLogMonitor
           }
         }
 
-        // for minimal we only want one line if possible, so remove any line breaks
-        message = message.Replace("\r\n", "");
+        // for minimal we only want one line if possible, so remove any line breaks left after trimming
+        // and replace with a ' ' space or a ". " if appropriate.
+        message = message.TrimEnd();
+
+        ReadOnlySpan<char> messageSpan = message;
+        int count = messageSpan.Count(iEventShortSeparater);
+        if (count > 0)
+        {
+          message = EventLogUtils.RemoveChars(message, messageSpan, iEventShortSeparater, count);
+        }
       }
     }
 
@@ -1586,8 +1594,7 @@ public class EventLogMonitor
 
 }
 
-
-//[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)]
+[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)]
 public static class ReflectionExtensions
 {
   public static T GetFieldValue<T>(this object o, string fieldName)

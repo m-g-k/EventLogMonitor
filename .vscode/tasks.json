@@ -49,7 +49,15 @@
         "/p:IncludeNativeLibrariesForSelfExtract=true",
         "--self-contained",
         "true",
-        "-p:PublishReadyToRun=true"
+        "-p:PublishReadyToRun=true",
+        "-o",
+        "${workspaceFolder}\\out\\WithRuntime"
+      ],
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "clean - Release",
+        "build - Release",
+        "run tests against Release build"
       ],
       "problemMatcher": "$msCompile"
     },
@@ -70,7 +78,15 @@
         "/p:IncludeNativeLibrariesForSelfExtract=true",
         "--self-contained",
         "false",
-        "-p:PublishReadyToRun=true"
+        "-p:PublishReadyToRun=true",
+        "-o",
+        "${workspaceFolder}\\out\\NoRuntime"
+      ],
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "clean - Release",
+        "build - Release",
+        "run tests against Release build"
       ],
       "problemMatcher": "$msCompile"
     },
