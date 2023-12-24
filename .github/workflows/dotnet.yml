@@ -44,7 +44,7 @@ jobs:
       uses: actions/setup-dotnet@v3
       id: stepid
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 8.0.x
     - run: echo '${{ steps.stepid.outputs.dotnet-version }}' # outputs version used
 
     # Execute all unit tests in the solution
