@@ -76,6 +76,7 @@ public class EventLogMonitor
     myArgs.SetOptionalBooleanArgument("-fw");
     myArgs.SetOptionalBooleanArgument("-fe");
     myArgs.SetOptionalBooleanArgument("-fc");
+    myArgs.SetOptionalBooleanArgument("-nopatch");
 
     myArgs.SetOptionalBooleanArgument("-?"); // help
     myArgs.SetOptionalBooleanArgument("-help"); // help
@@ -296,8 +297,14 @@ public class EventLogMonitor
       if (!iLogName.Equals("Application"))
       {
         iSource = "*"; //look for all entries
-        iMultiMatch = Array.Empty<string>();
+        iMultiMatch = [];
       }
+    }
+
+    bool dontPatchProviders = myArgs.GetBooleanArgument("-nopatch");
+    if (dontPatchProviders)
+    {
+      CultureSpecificMessage.SpecialCaseMissingProviders = false;
     }
 
     // make the default one first
@@ -772,9 +779,12 @@ public class EventLogMonitor
           // ignore other key presses
         }
 
+        // stop receiving events as we are shutting down
+        watcher.Enabled = false;
       }
 
       // Always finish by showing what we displayed
+      Console.ResetColor();
       string toLog2 = EventSourceAsString();
       Console.WriteLine(s_entriesDisplayed + " Entries shown from the " + this.iLogName + " log matching the event source '" + toLog2 + "'.");
     }
@@ -790,7 +800,8 @@ public class EventLogMonitor
     {
       level = (StandardEventLevel)entry.Level;
     }
-    String type;
+
+    string type;
     ConsoleColor textColour;
     if (entry.LogName == "Security")
     {
@@ -819,16 +830,18 @@ public class EventLogMonitor
 
     string message = string.Empty;
     string win32Message = string.Empty;
+    bool messagePatched = false;
     int lcidUsed = -1;
     try
     {
 
+      CultureSpecificMessage.EventLogRecordWrapper wrapper = null;
       if (iCultureSet)
       {
         // try to get the specific language version of the message.
         // however, this may not be available so the message may not be found
         // This is works best when the user has provided a DLL along side an EVTX
-        CultureSpecificMessage.EventLogRecordWrapper wrapper = new(entry);
+        wrapper = new(entry);
         message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, iChosenCultureLCID, iChosenCultureName);
         if (string.IsNullOrEmpty(message))
         {
@@ -863,7 +876,7 @@ public class EventLogMonitor
           // be to call FormatMessage with a Lang Neutral (0) and so will prefer 0 above other LCIDs!
           // this will fall back to trying En-US if Language Neutral (0) fails to find a match and
           // will work when the user has provided a DLL alongside an EVTX which has neutral or US messages in it
-          CultureSpecificMessage.EventLogRecordWrapper wrapper = new(entry);
+          wrapper = new(entry);
           message = CultureSpecificMessage.GetCultureSpecificMessage(wrapper, 0, iUSDefaultCulture.Name);
           lcidUsed = iUSDefaultCulture.LCID;
         }
@@ -873,7 +886,7 @@ public class EventLogMonitor
         }
       }
 
-      // Final fallback try one last time, forcing thread to US (but must reset)
+      // Fallback forcing thread to US (but must reset)
       if (string.IsNullOrEmpty(message))
       {
         // try again with the console default culture instead - but must reset
@@ -897,6 +910,18 @@ public class EventLogMonitor
         }
       }
 
+      // Try one last time to get a patched version of the message
+      // where we just get the inserts in a string, assuming patching is allowed.
+      // This should work for all events except those that have no inserts or just a single binary insert
+      // but we are not getting a "real" message just whatever inserts were writting to the log
+      // "Universal Print" is an example of this case as it is registered but the .mui file is missing 
+      // on 2 machines tested!
+      if (string.IsNullOrEmpty(message))
+      {
+        wrapper ??= new(entry);
+        message = CultureSpecificMessage.GetPatchedMessageFromFormatString(wrapper);
+        messagePatched = true;
+      }
     }
     catch (EventLogException e)
     {
@@ -912,6 +937,8 @@ public class EventLogMonitor
     // see if we still have nothing!
     if (string.IsNullOrEmpty(message))
     {
+      messagePatched = false; // just in case - can't be patched if we don't have a msg!
+
       // build our own response message like the event log API does!
       message = "The description for Event ID " + entry.Id + " from source " + entry.ProviderName + " cannot be found. " +
       "Either the component that raises this event is not installed on your local computer or the installation is corrupted. " +
@@ -1009,10 +1036,27 @@ public class EventLogMonitor
         message = message.TrimEnd();
 
         ReadOnlySpan<char> messageSpan = message;
+        // first look for "\r\n"
         int count = messageSpan.Count(iEventShortSeparater);
         if (count > 0)
         {
           message = EventLogUtils.RemoveChars(message, messageSpan, iEventShortSeparater, count);
+        }
+
+        // next look for any remaining '\n'
+        messageSpan = message;
+        count = messageSpan.Count("\n");
+        if (count > 0)
+        {
+          message = EventLogUtils.RemoveChars(message, messageSpan, "\n", count);
+        }
+
+        // finally look for any remaining '\r'
+        messageSpan = message;
+        count = messageSpan.Count("\r");
+        if (count > 0)
+        {
+          message = EventLogUtils.RemoveChars(message, messageSpan, "\r", count);
         }
       }
     }
@@ -1057,12 +1101,19 @@ public class EventLogMonitor
     Console.ForegroundColor = textColour;
     if (brokerEventLogEntry)
     {
-      Console.Write("BIP" + entry.Id + type + ": ");
+      Console.Write("BIP");
     }
-    else
+
+    Console.Write(entry.Id + type);
+
+    if (messagePatched)
     {
-      Console.Write(entry.Id + type + ": ");
+      Console.ForegroundColor = ConsoleColor.DarkYellow;
+      Console.Write(" [P]");
+      Console.ForegroundColor = textColour;
     }
+
+    Console.Write(": ");
 
     bool forceMinBinaryOutput = false;
     if (level == StandardEventLevel.Error || level == StandardEventLevel.Critical)
@@ -1392,6 +1443,7 @@ public class EventLogMonitor
     Console.WriteLine("  -fn Specify -fn <id_filter> to only show entries with the specified IDs.");
     Console.WriteLine("      The ID filter supports included, excluded and ranges of event IDs. For");
     Console.WriteLine("      details see: https://github.com/m-g-k/EventLogMonitor#filter-on-event-id");
+    Console.WriteLine("  -nopatch Don't patch missing providers. See README.MD for details.");
     Console.WriteLine("  -utc Display the timestamp as UTC.");
     Console.WriteLine("  -version - displays the version of this tool.");
     Console.WriteLine("  -? or -help - displays this help.");

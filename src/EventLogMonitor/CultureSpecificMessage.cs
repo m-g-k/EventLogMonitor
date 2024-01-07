@@ -21,6 +21,7 @@ using System.Diagnostics.Eventing.Reader;
 using System.Collections.Generic;
 using Microsoft.Win32;
 using System.Security;
+using System.Text;
 
 namespace EventLogMonitor
 {
@@ -34,15 +35,38 @@ namespace EventLogMonitor
 
     [DllImport("kernel32.dll")]
     private static extern bool FreeLibrary(IntPtr hModule);
-
+    private const int FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x00000100;
     private const int FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200;
+    private const int FORMAT_MESSAGE_FROM_STRING = 0x00000400;
     private const int FORMAT_MESSAGE_FROM_HMODULE = 0x00000800;
     // private const int FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000;
     private const int FORMAT_MESSAGE_ARGUMENT_ARRAY = 0x00002000;
-    private const int FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x00000100;
+
     private const int FORMAT_MESSAGE_MAX_WIDTH_MASK = 0x000000FF;
     private const int USEnglishLCID = 1033;
-    private static readonly Dictionary<string, IntPtr> iCatalogueCache = new();
+    private static readonly Dictionary<string, IntPtr> iCatalogueCache = [];
+
+    // There are several EventLog providers that have been verified to not register catalogs in the registry, but
+    // instead output messages (usually with a low number like 0 or 1) that have the information directly
+    // in the inserts so we can provide a default insert string for them instead of giving an error message
+    // for a message not found. Most of these seem to be "updater" services that are derived from a version
+    // of "Omaha", the open-source version of Google Update: https://github.com/google/omaha
+    // Here are some of the logs that show this and similar issues that we can patch when encountered.
+    // "AdobeARMservice", // Adobe Acrobat Update Service
+    //  "dbupdate", // Dropbox Update Service (dbupdate)
+    //  "dbupdatem", // Dropbox Update Service (dbupdatem)
+    //  "Dolby DAX2 API Service", // Dolby DAX2 API Service 
+    //  "gupdate",  // Google Update Service (gupdate)
+    //  "gupdatem",  // Google Update Service (gupdatem)
+    //  "iBtSiva",  // Intel(R) Wireless Bluetooth(R) iBtSiva Service
+    //  "igfxCUIService1.0.0.0",  // Intel(R) HD Graphics Control Panel Service
+    //  "igfxCUIService2.0.0.0",  // Intel(R) HD Graphics Control Panel Service
+    //  "WebExService", // Cisco WebEx Update Service
+    //  "Universal Print" // Universal Print Management Service (MS) - missing MUI file
+    // Note that our check and patch is done very late in the reading flow on purpose so that if
+    // a provider were to be registered in a new update of an application it would automatically
+    // be picked up and take precedence of our patch. 
+    public static bool SpecialCaseMissingProviders { get; set; } = true; // can be unset with '-nopatch'
 
     [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, EntryPoint = "FormatMessageW", SetLastError = true, BestFitMapping = true, ExactSpelling = true)]
     private static extern int FormatMessageW(
@@ -52,32 +76,15 @@ namespace EventLogMonitor
       int dwLanguageId,
       ref IntPtr lpBuffer,
       int nSize,
-      string[] pArguments);
+      string[] pArguments
+    );
 
     public static string GetCultureSpecificMessage(IEventLogRecordWrapper entry, int cultureLCID, string cultureName)
     {
-      // make a list of inserts, but ignore the last entry if this is binary
-      int insertCount = entry.Properties.Count;
-      List<string> insertList = new(insertCount);
-      for (int i = 0; i < insertCount; ++i)
-      {
-        object insert = entry.Properties[i].Value;
-        if (insert is byte[])
-        {
-          // use an empty string or we get the string "System.Byte[]" not the value.
-          // the user can see the value if they provide -b1 or -b2 as byte[]'s are always the last insert
-          insertList.Add("");
-        }
-        else
-        {
-          insertList.Add(insert.ToString());
-        }
-      }
-
       bool entryIsAFile = EventLogMonitor.LogIsAFile(entry.ContainerLog);
       string provider = entry.ProviderName; // e.g "IBM App Connect Enterprise v110011" or "Microsoft-Windows-Security-Auditing"
       string logName = entry.LogName; // e.g. "Application" or "Security"
-      string providerRegPath = @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\EventLog\" + logName + @"\" + provider;
+      string providerRegPath = @$"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\EventLog\{logName}\{provider}";
       string catalogueLocation = null;
       bool securityLogFailure = false;
       try
@@ -93,13 +100,17 @@ namespace EventLogMonitor
         }
       }
 
+      // get a list of all inserts (apart from the last if it is binary)
+      List<string> insertList = entry.Properties;
+
+      string formatString = string.Empty;
       if (string.IsNullOrEmpty(catalogueLocation))
       {
         if (entryIsAFile)
         {
           // See if we have a message dll to use next to the current file.
           // Here we look for a file in the same location as the .evtx with
-          // the same name but a .dll extension instead.         
+          // the same name but a .dll extension instead.
           var (baseName, baseLocation) = GetPathBaseLocation(entry.ContainerLog);
           int index = baseName.LastIndexOf('.');
           string fileName = baseName[..index];
@@ -117,13 +128,6 @@ namespace EventLogMonitor
             catalogueLocation = Environment.GetFolderPath(Environment.SpecialFolder.System) + "\\adtschema.dll"; // adtschema.dll contains the entries for the security log
           }
         }
-
-        // check again
-        if (string.IsNullOrEmpty(catalogueLocation))
-        {
-          // we don't have a message catalogue DLL so can't get a culture specific message
-          return string.Empty;
-        }
       }
       else
       {
@@ -139,24 +143,69 @@ namespace EventLogMonitor
           }
         }
 
-        // Test for an MUI file. If the event is from MS then it is likely there will be a MUI file which we should use instead of the 
-        // base DLL. Some other apps also follow this pattern of placing a file with the same name but including a .mui extension
-        // in a culture specific subfolder. E.g if the catalogueLocation is "C:\\WINDOWS\\system32\\microsoft-windows-kernel-power-events.dll" and the
-        // culture is german then we are looking for the file "C:\\WINDOWS\\system32\\de-DE\\microsoft-windows-kernel-power-events.dll.mui"
-        // This is per: https://docs.microsoft.com/en-us/windows/win32/intl/application-deployment. Note that we do not currently handle the
-        // documented pre-vista file layout for MUI files as this is so old, but raise an issue if this causes you problems...
-        var (baseName, baseLocation) = GetPathBaseLocation(catalogueLocation);
-        string muiFullName = baseLocation + cultureName + "\\" + baseName + ".mui";
-        if (File.Exists(muiFullName))
+        // see if we have an MUI file to use instead of the dll
+        string muiFile = LookforMuiLocation(cultureName, catalogueLocation);
+        if (!string.IsNullOrEmpty(muiFile))
         {
-          catalogueLocation = muiFullName;
+          catalogueLocation = muiFile;
         }
       }
 
-      IntPtr dllHandle;
-      if (iCatalogueCache.ContainsKey(catalogueLocation))
+      // see if we can get a dll handle first...
+      IntPtr dllHandle = IntPtr.Zero;
+      dllHandle = GetDllHandle(catalogueLocation);
+
+      // If no dll is found we are done
+      if (dllHandle == IntPtr.Zero)
       {
-        dllHandle = iCatalogueCache[catalogueLocation];
+        return string.Empty;
+      }
+
+      int finalCode = CalculateMessageNumber(entry);
+      string responseMsg = GetMessage(finalCode, insertList.ToArray(), cultureLCID, dllHandle, formatString);
+      return responseMsg;
+    }
+
+    public static string GetPatchedMessageFromFormatString(IEventLogRecordWrapper entry)
+    {
+      // get a list of all inserts apart from the last if it is binary
+      List<string> insertList = entry.Properties;
+      string formatString = GenerateFormatString(entry, insertList);
+      if(string.IsNullOrEmpty(formatString)) 
+      {
+        // we can have an empty format string if there are no inserts or just a single binary one
+        return string.Empty;
+      }
+      int finalCode = CalculateMessageNumber(entry);
+      string responseMsg = GetMessage(finalCode, insertList.ToArray(), 0, IntPtr.Zero, formatString);
+      return responseMsg;
+    }
+
+    private static string LookforMuiLocation(string cultureName, string catalogueLocation)
+    {
+      // Test for an MUI file. If the event is from MS then it is likely there will be a MUI file which we should use instead of the 
+      // base DLL. Some other apps also follow this pattern of placing a file with the same name but including a .mui extension
+      // in a culture specific subfolder. E.g if the catalogueLocation is "C:\\WINDOWS\\system32\\microsoft-windows-kernel-power-events.dll" and the
+      // culture is german then we are looking for the file "C:\\WINDOWS\\system32\\de-DE\\microsoft-windows-kernel-power-events.dll.mui"
+      // This is per: https://docs.microsoft.com/en-us/windows/win32/intl/application-deployment. Note that we do not currently handle the
+      // documented pre-vista file layout for MUI files as this is so old, but raise an issue if this causes you problems...
+      var (baseName, baseLocation) = GetPathBaseLocation(catalogueLocation);
+      string muiFullName = baseLocation + cultureName + "\\" + baseName + ".mui";
+      return File.Exists(muiFullName) ? muiFullName : String.Empty;
+    }
+
+    private static IntPtr GetDllHandle(string catalogueLocation)
+    {
+      IntPtr dllHandle = IntPtr.Zero;
+      if (String.IsNullOrEmpty(catalogueLocation))
+      {
+        return dllHandle;
+      }
+
+      // get a handle to the DLL/MUI file passed in
+      if (iCatalogueCache.TryGetValue(catalogueLocation, out IntPtr value))
+      {
+        dllHandle = value;
       }
       else
       {
@@ -166,44 +215,25 @@ namespace EventLogMonitor
         {
           iCatalogueCache[catalogueLocation] = dllHandle;
         }
-        else
-        {
-          // we can't load the message catalogue DLL so can't get a culture specific message
-          return string.Empty;
-        }
       }
 
-      // The native FormatMessage expects the qualifier as the high word of the msg number
-      int finalCode;
-      if (entry.Qualifiers > 0)
+      return dllHandle;
+    }
+
+    private static string GetMessage(int msgCode, string[] arguments, int cultureLCID, IntPtr moduleHandle, string formatString)
+    {
+      int flags;
+      bool useFormatString = false;
+      if (!string.IsNullOrEmpty(formatString))
       {
-        finalCode = (int)entry.Qualifiers << 16;
-        finalCode += entry.Id;
+        useFormatString = true;
+        flags = FORMAT_MESSAGE_FROM_STRING | FORMAT_MESSAGE_ALLOCATE_BUFFER;
       }
       else
       {
-        if (entry.Level == StandardEventLevel.Critical)
-        {
-          // Investigation shows that critical entries do not set the severity bits,
-          // instead they set bit 26 in the Facility section so we need to set it here
-          // too so that the correct message number is used.
-          finalCode = 0x200 << 16;
-          finalCode += entry.Id;
-        }
-        else
-        {
-          finalCode = entry.Id;
-        }
+        //flags = FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER;
+        flags = FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_ALLOCATE_BUFFER;
       }
-
-      string responseMsg = GetMessage(finalCode, insertList.ToArray(), cultureLCID, dllHandle);
-      return responseMsg;
-    }
-
-    private static string GetMessage(int msgCode, string[] arguments, int cultureLCID, IntPtr moduleHandle)
-    {
-      //int flags = FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER;
-      int flags = FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_ALLOCATE_BUFFER;
 
       if (arguments.Length > 0)
       {
@@ -226,7 +256,13 @@ namespace EventLogMonitor
         int currentCulture = cultureLCID;
         while (true)
         {
-          int length = FormatMessageW(flags, moduleHandle, unchecked((uint)msgCode), currentCulture, ref nativeBuffer, 65535, arguments);
+          IntPtr formatPtr = moduleHandle;
+          if (useFormatString)
+          {
+            formatPtr = Marshal.StringToHGlobalUni(formatString);
+          }
+
+          int length = FormatMessageW(flags, formatPtr, unchecked((uint)msgCode), currentCulture, ref nativeBuffer, 65535, arguments);
           // Console.WriteLine("Len: " + length + ", lastErr: " + Marshal.GetLastWin32Error()); // debugging
 
           if (length > 0)
@@ -298,6 +334,55 @@ namespace EventLogMonitor
       return string.Empty;
     }
 
+    private static string GenerateFormatString(IEventLogRecordWrapper entry, List<string> insertList)
+    {
+      var retVal = string.Empty;
+      if (SpecialCaseMissingProviders)
+      {
+        int insertCount = insertList.Count;
+        if (entry.LastPropertyIsByteArray())
+        {
+          --insertCount; // don't include a byte[] in the format string if present
+        }
+
+        StringBuilder result = new(insertCount);
+        for (int i = 1; i <= insertCount; ++i)
+        {
+          result.Append($"%{i}.%n");
+        }
+        retVal = result.ToString();
+      }
+
+      return retVal;
+    }
+
+    static private int CalculateMessageNumber(IEventLogRecordWrapper entry)
+    {
+      // The native FormatMessage expects the qualifier as the high word of the msg number
+      int finalCode;
+      if (entry.Qualifiers > 0)
+      {
+        finalCode = (int)entry.Qualifiers << 16;
+        finalCode += entry.Id;
+      }
+      else
+      {
+        if (entry.Level == StandardEventLevel.Critical)
+        {
+          // Investigation shows that critical entries do not set the severity bits,
+          // instead they set bit 26 in the Facility section so we need to set it here
+          // too so that the correct message number is used.
+          finalCode = 0x200 << 16;
+          finalCode += entry.Id;
+        }
+        else
+        {
+          finalCode = entry.Id;
+        }
+      }
+      return finalCode;
+    }
+
     // Method to split a full path location into a base name and location
     // for a location "C:\\WINDOWS\\system32\\microsoft-windows-kernel-power-events.evtx"
     // baseName would be microsoft-windows-kernel-power-events.evtx and
@@ -317,28 +402,62 @@ namespace EventLogMonitor
       public int? Qualifiers { get; }
       public int Id { get; }
       public string ProviderName { get; }
-      public IList<EventProperty> Properties { get; }
+      public List<string> Properties { get; }
       public string LogName { get; }
       public StandardEventLevel Level { get; }
+      public bool LastPropertyIsByteArray();
     }
 
     // Class to allow mocking of an EventLogRecord
     public class EventLogRecordWrapper : IEventLogRecordWrapper
     {
       private readonly EventRecord iLogRecord;
+      private List<string> iEventProperties;
       public EventLogRecordWrapper(EventRecord logRecord)
       {
         iLogRecord = logRecord;
       }
       public string ContainerLog => iLogRecord is EventLogRecord record ? record.ContainerLog : null;
-
       public int? Qualifiers => iLogRecord.Qualifiers;
 
       public int Id => iLogRecord.Id;
 
       public string ProviderName => iLogRecord.ProviderName;
 
-      public IList<EventProperty> Properties => iLogRecord.Properties;
+      public List<string> Properties
+      {
+        get
+        {
+          if (iEventProperties == null)
+          {
+            // make a list of inserts, but ignore the last entry if this is binary
+            int insertCount = iLogRecord.Properties.Count;
+            List<string> insertList = new(insertCount);
+            for (int i = 0; i < insertCount; ++i)
+            {
+              object insert = iLogRecord.Properties[i].Value;
+              if (insert is byte[])
+              {
+                // use an empty string or we get the string "System.Byte[]" not the value.
+                // the user can see the value if they provide -b1 or -b2 as byte[]'s are always the last insert
+                insertList.Add("");
+              }
+              else
+              {
+                insertList.Add(insert.ToString());
+              }
+            }
+            iEventProperties = insertList;
+          }
+          return iEventProperties;
+        }
+      }
+
+      public bool LastPropertyIsByteArray()
+      {
+        int insertCount = iLogRecord.Properties.Count;
+        return insertCount > 0 && iLogRecord.Properties[insertCount - 1].Value.GetType() == typeof(byte[]);
+      }
 
       public string LogName => iLogRecord.LogName;
 

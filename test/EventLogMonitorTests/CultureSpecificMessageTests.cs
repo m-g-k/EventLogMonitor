@@ -33,8 +33,9 @@ public class CultureSpecificMessageTests
   [SuppressMessage("Microsoft.Usage", "IDE0052:RemoveUnreadPrivateMember", MessageId = "stdoutput")]
   private readonly ITestOutputHelper stdoutput;
   private readonly string invalidMessageCatalogueDll;
+  private static readonly string[] separator = ["\n", "\r"];
 
-  class VSSSampleEventLogLocationData : TheoryData<string,string>
+  class VSSSampleEventLogLocationData : TheoryData<string, string>
   {
     public VSSSampleEventLogLocationData()
     {
@@ -61,11 +62,11 @@ public class CultureSpecificMessageTests
     mockEventRecord.Setup(x => x.ProviderName).Returns("ORIGINALLY_FROM_VSS"); // must not be valid to prevent the LocaleMetaData version finding the provider
     mockEventRecord.Setup(x => x.ContainerLog).Returns(vssSampleEventLogLocation); // valid event log name name
     mockEventRecord.Setup(x => x.Qualifiers).Returns(0);
-    mockEventRecord.Setup(x => x.Properties).Returns(new List<EventProperty>());
+    mockEventRecord.Setup(x => x.Properties).Returns(new List<string>());
     int enUSCulture = 1033;
     string enUSCultureName = "En-US";
 
-    string message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture, enUSCultureName);
+    var message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture, enUSCultureName);
     stdoutput.WriteLine(message);
 
     Assert.Equal(expectedResult, message);
@@ -81,14 +82,119 @@ public class CultureSpecificMessageTests
     mockEventRecord.Setup(x => x.ProviderName).Returns("I Dont Exist");
     mockEventRecord.Setup(x => x.ContainerLog).Returns(invalidMessageCatalogueDll);
     mockEventRecord.Setup(x => x.Qualifiers).Returns(0);
-    mockEventRecord.Setup(x => x.Properties).Returns(new List<EventProperty>());
+    mockEventRecord.Setup(x => x.Properties).Returns(new List<string>());
     int enUSCulture = 1033;
     string enUSCultureName = "En-US";
 
-    string message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture, enUSCultureName);
+    var message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture, enUSCultureName);
     stdoutput.WriteLine(message);
 
     Assert.Empty(message);
+  }
+
+  [Fact]
+  public void PatchedProviderWithNoMessageCatalogueWithInsertsReturnsFormattedString()
+  {
+    //arrange
+    // test a special cases entry returns its inserts only
+    var mockEventRecord = new Mock<CultureSpecificMessage.IEventLogRecordWrapper>();
+    mockEventRecord.Setup(x => x.Id).Returns(42);
+    mockEventRecord.Setup(x => x.LogName).Returns("Applicationz");
+    mockEventRecord.Setup(x => x.ProviderName).Returns("MissingProvider");
+    mockEventRecord.Setup(x => x.ContainerLog).Returns("NotFound.dll");
+    mockEventRecord.Setup(x => x.Qualifiers).Returns(0);
+
+    List<string> insertList = ["insert1", "insert2", "insert3"];
+    mockEventRecord.Setup(x => x.Properties).Returns(insertList);
+
+    int enUSCulture = 1033;
+    string enUSCultureName = "En-US";
+
+    // act
+    // make sure GetCultureSpecificMessage returns empty string for a missing provider
+    var message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture, enUSCultureName);
+    var patchedMessage = CultureSpecificMessage.GetPatchedMessageFromFormatString(mockEventRecord.Object);
+    stdoutput.WriteLine(patchedMessage);
+    string[] lines = patchedMessage.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+
+    // assert
+    Assert.Empty(message);
+    Assert.NotEmpty(patchedMessage);
+    Assert.Equal(3, lines.Length);
+    Assert.Equal("insert1.", lines[0]);
+    Assert.Equal("insert2.", lines[1]);
+    Assert.Equal("insert3.", lines[2]);
+  }
+
+  [Fact]
+  public void MissingProvidersAreSpecialCasedPatchedMessageReturnsInsertsOnlyResult()
+  {
+    //arrange
+    var mockEventRecord = new Mock<CultureSpecificMessage.IEventLogRecordWrapper>();
+    mockEventRecord.Setup(x => x.Id).Returns(42);
+    mockEventRecord.Setup(x => x.LogName).Returns("Applicationz");
+    mockEventRecord.Setup(x => x.ProviderName).Returns("MissingProvider");
+    mockEventRecord.Setup(x => x.ContainerLog).Returns("NotFound.dll");
+    mockEventRecord.Setup(x => x.Qualifiers).Returns(0);
+
+    List<string> insertList = ["insert11", "insert22", "insert33"];
+    mockEventRecord.Setup(x => x.Properties).Returns(insertList);
+
+    int enUSCulture = 1033;
+    string enUSCultureName = "En-US";
+
+    // act
+
+    // make sure GetCultureSpecificMessage returns empty string for a missing provider
+    var message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture, enUSCultureName);
+    var patchedMessage = CultureSpecificMessage.GetPatchedMessageFromFormatString(mockEventRecord.Object);
+    stdoutput.WriteLine(patchedMessage);
+    string[] lines = patchedMessage.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+
+    // assert
+    Assert.Empty(message);
+    Assert.NotEmpty(patchedMessage);
+    Assert.Equal(3, lines.Length);
+    Assert.Equal("insert11.", lines[0]);
+    Assert.Equal("insert22.", lines[1]);
+    Assert.Equal("insert33.", lines[2]);
+  }
+
+  [Fact]
+  public void SpecialCasedEntriesListCanBeClearedAndEmptyStringReturned()
+  {
+    //arrange
+    var specialCasingProvidersFlag = CultureSpecificMessage.SpecialCaseMissingProviders;
+    try
+    {
+      CultureSpecificMessage.SpecialCaseMissingProviders = false; // disable special casing
+
+      var mockEventRecord = new Mock<CultureSpecificMessage.IEventLogRecordWrapper>();
+      mockEventRecord.Setup(x => x.Id).Returns(42);
+      mockEventRecord.Setup(x => x.LogName).Returns("Applicationz");
+      mockEventRecord.Setup(x => x.ProviderName).Returns("MissingProviders");
+      mockEventRecord.Setup(x => x.ContainerLog).Returns("NotFound.dll");
+      mockEventRecord.Setup(x => x.Qualifiers).Returns(0);
+
+      List<string> insertList = ["insert11", "insert22", "insert33"];
+      mockEventRecord.Setup(x => x.Properties).Returns(insertList);
+
+      int enUSCulture = 1033;
+      string enUSCultureName = "En-US";
+
+      // act
+      var message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture, enUSCultureName);
+      stdoutput.WriteLine(message);
+      string[] lines = message.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+
+      // assert
+      Assert.Empty(lines);
+    }
+    finally
+    {
+      // reset the default
+      CultureSpecificMessage.SpecialCaseMissingProviders = specialCasingProvidersFlag;
+    }
   }
 
 }

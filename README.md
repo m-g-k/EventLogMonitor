@@ -380,7 +380,13 @@ You can use the `-c <culture>` option to change the culture (or language) used t
 Note that you may need to use a Unicode font to be able to display certain languages in your terminal.
 
 ## Viewing events without message catalogues <a name="no-catalogue"></a>
-If the message catalogue for an event cannot be found, or the catalogue does not contain an entry for the event in question, a default message is output instead. Normally that message looks similar to the one output by the Event Viewer built into Windows in this situation:<br>
+If the message catalogue for an event cannot be found, or the catalogue does not contain an entry for the event in question, by default a "patched" version of the message is output if the message has inserts. This means that what is written to the console is only the inserts from the event, and each insert is separated by with a new line. So you can tell that an event has been "patched" in this way, the event it written with a `[P]` (for "patched") after the event ID. An example of this would be:<br>
+
+<span style="color:green">**0I**</span> <span style="color:GoldenRod">**[P]**</span><span style="color:green">**:**</span> `Service stopped.` **`[07/01/2024 17:21:10.165]`**<br>
+
+When an event is patched by default you will only see the first insert written to the console. To see the first 2 inserts you should use the `-2` option and to see all inserts you should use the `-3` option. And to see which provider output the event, use `-v` "verbose" output option.
+
+However, if the event has no inserts at all, or you use the `-nopatch` option to turn off event patching, then a default message is output instead. Normally this message looks similar to the one output by the Event Viewer built into Windows in this situation:<br>
 
 <span style="color:green">**0I**</span>`: The description for Event ID 0 from source XYZ cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [25/01/2020 20:30:25.632]`<br>
 
@@ -402,7 +408,15 @@ or even:
 
 for an event ID of 3.
 
-What is happening here is that if the Event Viewer detects that the event was written with a "qualifier" of zero (see [EventRecord.Qualifiers](https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.eventing.reader.eventrecord.qualifiers?view=dotnet-plat-ext-6.0#system-diagnostics-eventing-reader-eventrecord-qualifiers)) it tries to convert the event ID into a Win32 error message. If that conversion is sucessful then the Win32 error message that corresponds to the event ID is output instead of the default error message shown above. Whilst this approach means the event viewer output contains fewer error messages like the one above, it can be misleading in many cases as the Win32 message may not match the event. Therefore, EventLogMonitor chooses to always output the original error message instead which more acurately reflects the situation. However, if you also use the `-v` "verbose" option then you will see an extra entry on the verbose output line for the `Win32Msg` in this case:<br>
+and occasionally:
+
+`The specified printer handle is already being waited on.`<br>
+
+for an event ID of 1904.
+
+What is happening here is that if the Event Viewer detects that the event was written with a "qualifier" of zero (see [EventRecord.Qualifiers](https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.eventing.reader.eventrecord.qualifiers?view=dotnet-plat-ext-6.0#system-diagnostics-eventing-reader-eventrecord-qualifiers)) it tries to convert the event ID into a Win32 error message. If that conversion is sucessful then the Win32 error message that corresponds to the event ID is output instead of the default error message shown above.
+
+Whilst this approach means the event viewer output contains fewer error messages like the one above, it is often misleading as in many cases as the Win32 message does not match the event. Therefore, `EventLogMonitor` chooses to either patch the output as explained above or output the original event log error message instead which more acurately reflects the situation. However, if you also use the `-v` "verbose" option then you will see an extra entry on the verbose output line for the `Win32Msg` in this case:<br>
 
 `Machine: mgk-PC3. Log: Application. Source: Firefox Default Browser Agent. Win32Msg: The operation completed successfully. (0).`<br>
 
@@ -410,10 +424,26 @@ or perhaps:
 
 `Machine: mgk-PC3. Log: Application. Source: iBtSiva. Win32Msg: The system cannot find the path specified. (3).`<br>
 
-Of course the exact message shown will reflect the actual event ID. This allows you to see the same information in EventLogMonitor that you do in the Event Viewer.
+or amusingly:
+
+`Machine: mgk-PC3. Log: Application. Source: HHCTRL. Win32Msg: The specified printer handle is already being waited on (1904).`
+
+Of course the exact `Win32Msg` shown will reflect the actual event ID. This allows you to see the same information in EventLogMonitor that you do in the Event Viewer.
+
+The following providers are examples of providers that do not install a catalogue (at the time of writing) and so are patched by default:
+* `AdobeARMservice`: Adobe Acrobat Update Service
+* `dbupdate`: Dropbox Update Service
+* `dbupdatem`: Dropbox Update Service
+* `Dolby DAX2 API Service`: Dolby DAX2 API Service
+* `gupdate`: Google Update Service
+* `gupdatem`: Google Update Service
+* `iBtSiva`: Intel(R) Wireless Bluetooth(R) iBtSiva Service
+* `igfxCUIService1.0.0.0`: Intel(R) HD Graphics Control Panel Service
+* `WebExService`: Cisco WebEx Update Service
+* `Universal Print`: Universal Print Management Service
 
 ## Viewing the Security log
-The `Security` log can be viewed like any other log by specifing it's name with the `-l` option:<br>
+The `Security` log can be viewed like any other log by specifing its name with the `-l` option:<br>
 
 `EventLogMonitor.exe -l Security`<br>
 
@@ -431,6 +461,7 @@ Once your prompt is elevated then all the other options like `-p` and `-3` etc, 
 There are a final few options that have not been covered elsewhere. These are:
 * `-nt` or "No Tailing". If you are only wanting to view existing events, specifying `-nt` will stop the tool tailing the log at the end of the output.
 * `-utc`. Display the event timestamp in UTC time rather than converting it to local time. Local time conversion is the default.
+* `-nopatch`. Do not patch events that are missing catalogues.
 * `-?` or `-help`. The help commands produce a simplified version of this readme.
 * `-version`. Displays the version of the EventLogMonitor tool being run.
 

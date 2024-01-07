@@ -28,6 +28,7 @@ using System.Runtime.InteropServices;
 using System.Numerics;
 using Microsoft.Win32;
 using System.Reflection;
+using System.Runtime.Serialization;
 
 namespace EventLogMonitor;
 
@@ -38,7 +39,6 @@ public class EventLogMonitorTests
   private readonly ITestOutputHelper stdoutput;
   private static readonly string ace11SampleEventLogDLLsLocation = "../../../../../test/EventLogMonitorTests/SampleEventLogs_Dlls/ACE-11-Log.evtx";
   private static readonly string ace11SampleEventLogLocaleMetaDataLocation = "../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/ACE-11-Log.evtx";
-
   private static readonly CultureInfo enGBCulture = new("En-GB", true);
 
   [DllImport("Kernel32.dll", CharSet = CharSet.Auto)]
@@ -338,6 +338,155 @@ public class EventLogMonitorTests
     }
   }
 
+  // Results when entry without a dll is PATCHED
+  private static readonly List<string> patchedWithBinaryResults =
+  [
+    "2155I [P]: Msg 2155.",
+    "Information Event.",
+    "Insert Three. [18/09/2023 16:36:04.420]",
+    "3132W [P]: Msg 3132.",
+    "Warning Event.",
+    "Insert Three. [18/09/2023 16:36:04.422]",
+    "2208E [P]: Msg 2208.",
+    "Error Event.",
+    "Insert Three. [18/09/2023 16:36:04.425]",
+    "namarie. Index: 874790",
+    "1234I [P]: Msg 1234.",
+    "Success Event.",
+    "Insert Three. [18/09/2023 16:36:04.425]",
+    "1234I [P]: Msg 1234.",
+    "Failure Audit.",
+    "Insert Three. [18/09/2023 16:36:04.426]",
+    "1234I [P]: Msg 1234.",
+    "Success Audit.",
+    "Insert Three. [18/09/2023 16:36:04.428]",
+  ];
+
+  private static readonly List<string> patchedWithNoBinaryResults =
+  [
+    "2155I [P]: Msg 2155.",
+    "Information Event - no extra binary data included.",
+    "Insert Three. [31/12/2023 09:35:30.312]",
+    "3132W [P]: Msg 3132.",
+    "Warning Event - no extra binary data included.",
+    "Insert Three. [31/12/2023 09:35:30.314]",
+    "2208E [P]: Msg 2208.",
+    "Error Event - no extra binary data included.",
+    "Insert Three. [31/12/2023 09:35:30.315]",
+    "<Entry has no binary data>. Index: 911306",
+    "1234I [P]: Msg 1234.",
+    "Success Event - no extra binary data included.",
+    "Insert Three. [31/12/2023 09:35:30.317]",
+    "1234I [P]: Msg 1234.",
+    "Failure Audit - no extra binary data included.",
+    "Insert Three. [31/12/2023 09:35:30.318]",
+    "1234I [P]: Msg 1234.",
+    "Success Audit - no extra binary data included.",
+    "Insert Three. [31/12/2023 09:35:30.320]",
+  ];
+
+  private static readonly List<string> patchedWithOnlyBinaryResults =
+  [
+    "5678I: The description for Event ID 5678 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer.",
+    "If the event originated on another computer, the display information had to be saved with the event.",
+    "The following information was included with the event:",
+    "The message resource is present but the message was not found in the message table [31/12/2023 11:03:43.279]"
+  ];
+
+  private static readonly List<string> patchedWithNoBinaryOrOtherInsertsResults =
+  [
+    "5678I: The description for Event ID 5678 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer.",
+    "If the event originated on another computer, the display information had to be saved with the event.",
+    "The message resource is present but the message was not found in the message table [31/12/2023 12:13:09.60]"
+  ];
+
+  private static readonly List<string> patchedUniversalPrintResults =
+  [
+    "1I [P]: Device is AAD/Domain Joined..",
+    "mcpmanagementservice.dll. [12/02/2023 13:45:04.385]",
+    "1I [P]: Using cached state. State: Enabled.",
+    "mcpmanagementservice.dll. [12/02/2023 13:45:04.387]",
+  ];
+
+  class PatchedTestsSpecificData : TheoryData<int, string, List<string>, int>
+  {
+    private static readonly string iPatchSampleEventLogLocationWithBinary = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-with-extra-binary-data.evtx";
+    private static readonly string iPatchSampleEventLogLocationWithNoBinary = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-no-extra-binary-data.evtx";
+    private static readonly string iPatchSampleEventLogLocationWithOnlyBinaryInsert = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-with-only-binary-data-as-insert.evtx";
+    private static readonly string iPatchSampleEventLogLocationWithNoBinaryOrOtherInserts = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-no-extra-binary-data-or-inserts.evtx";
+    private static readonly string iPatchSampleEventLogLocationUniversalPrint = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/UniversalPrint.evtx";
+
+    public PatchedTestsSpecificData()
+    {
+      Add(1, iPatchSampleEventLogLocationWithBinary, patchedWithBinaryResults, 6);
+      Add(2, iPatchSampleEventLogLocationWithNoBinary, patchedWithNoBinaryResults, 6);
+      Add(3, iPatchSampleEventLogLocationWithOnlyBinaryInsert, patchedWithOnlyBinaryResults, 1);
+      Add(4, iPatchSampleEventLogLocationWithNoBinaryOrOtherInserts, patchedWithNoBinaryOrOtherInsertsResults, 1);
+      // Note test 5 expects the "Universal Print" provider to be registered in the registry with a valid DLL, but
+      // at the time of writing the DLL references an MUI which is not found and this is the crux of this test.
+      // The interenet shows this has been the case for a long time, but if MS ever fix it this test will break,
+      // and should probably be retired at that point and "Universal Print" removed from the list of special providers.
+      Add(5, iPatchSampleEventLogLocationUniversalPrint, patchedUniversalPrintResults, 2);
+    }
+  }
+
+  // Results when entry without a dll is NOT PATCHED
+  private static readonly List<string> notPatchedWithBinaryResults =
+    [
+      "2155I: The description for Event ID 2155 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.420]",
+      "3132W: The description for Event ID 3132 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.422]",
+      "2208E: The description for Event ID 2208 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.425]",
+      "namarie. Index: 874790",
+      "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.425]",
+      "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.426]",
+      "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.428]"
+    ];
+
+  private static readonly List<string> notPatchedWithNoBinaryResults =
+  [
+    "2155I: The description for Event ID 2155 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [31/12/2023 09:35:30.312]",
+    "3132W: The description for Event ID 3132 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [31/12/2023 09:35:30.314]",
+    "2208E: The description for Event ID 2208 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [31/12/2023 09:35:30.315]",
+    "<Entry has no binary data>. Index: 911306",
+    "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [31/12/2023 09:35:30.317]",
+    "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [31/12/2023 09:35:30.318]",
+    "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [31/12/2023 09:35:30.320]"
+  ];
+
+  private static readonly List<string> notPatchedWithOnlyBinaryResults =
+  [
+    "5678I: The description for Event ID 5678 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [31/12/2023 11:03:43.279]"
+  ];
+
+  private static readonly List<string> notPatchedWithNoBinaryOrOtherInsertsResults =
+  [
+    "5678I: The description for Event ID 5678 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [31/12/2023 12:13:09.60]"
+  ];
+
+  private static readonly List<string> notPatchedUniversalPrintResults =
+  [
+    "1I: The description for Event ID 1 from source Universal Print cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [12/02/2023 13:45:04.385]",
+    "1I: The description for Event ID 1 from source Universal Print cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [12/02/2023 13:45:04.387]",
+  ];
+
+  class NotPatchedTestsSpecificData : TheoryData<int, string, List<string>, int>
+  {
+    private static readonly string iPatchSampleEventLogLocationWithBinary = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-with-extra-binary-data.evtx";
+    private static readonly string iPatchSampleEventLogLocationWithNoBinary = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-no-extra-binary-data.evtx";
+    private static readonly string iPatchSampleEventLogLocationWithOnlyBinaryInsert = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-with-only-binary-data-as-insert.evtx";
+    private static readonly string iPatchSampleEventLogLocationWithNoBinaryOrOtherInserts = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-no-extra-binary-data-or-inserts.evtx";
+    private static readonly string iPatchSampleEventLogLocationUniversalPrint = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/UniversalPrint.evtx";
+
+    public NotPatchedTestsSpecificData()
+    {
+      Add(1, iPatchSampleEventLogLocationWithBinary, notPatchedWithBinaryResults, 6);
+      Add(2, iPatchSampleEventLogLocationWithNoBinary, notPatchedWithNoBinaryResults, 6);
+      Add(3, iPatchSampleEventLogLocationWithOnlyBinaryInsert, notPatchedWithOnlyBinaryResults, 1);
+      Add(4, iPatchSampleEventLogLocationWithNoBinaryOrOtherInserts, notPatchedWithNoBinaryOrOtherInsertsResults, 1);
+      Add(5, iPatchSampleEventLogLocationUniversalPrint, notPatchedUniversalPrintResults, 2);
+    }
+  }
+
   public EventLogMonitorTests(ITestOutputHelper testOutputHelper)
   {
     // set up to capture stdout
@@ -415,11 +564,29 @@ public class EventLogMonitorTests
     string help = output.ToString();
     Assert.StartsWith("Invalid arguments or invalid argument combination.", help);
   }
+  /*
+    [Fact]
+    public void UsingBothPatchOptionsGivesAnErrorMessage()
+    {
+      // replace stdout to capture it
+      var output = new StringWriter();
+      Console.SetOut(output);
 
+      string[] args = new string[] { "-patch", "test,bar", "-nopatch" };
+      EventLogMonitor monitor = new();
+      monitor.Initialize(args);
+      string help = output.ToString();
+      Assert.StartsWith("Invalid arguments or invalid argument combination: only one of options '-patch' and '-nopatch' may be specified.", help);
+    }
+  */
   [Theory]
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2ReturnsTwoMostRecentPreviousEventsByDefault1(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -444,6 +611,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2ReturnsTwoMostRecentPreviousEventsByDefault2(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -468,6 +639,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2ReturnsTwoMostRecentPreviousEventsWithMediumOutput(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -496,6 +671,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2ReturnsTwoMostRecentPreviousEventsWithFullOutput(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -526,6 +705,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void UsingMoreThanOneOutputTypeReturnsAnError(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -545,6 +728,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2WithTFReturnsTwoMostRecentPreviousEventsWithTimestampFirst(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -568,6 +755,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2ReturnsTwoMostRecentPreviousEventsWithBinaryDataAsUnicode(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -596,6 +787,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2ReturnsTwoMostRecentPreviousEventsWithBinaryDataAsHex(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -632,6 +827,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2ReturnsTwoMostRecentPreviousEventsWithExtraVerboseOutput(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -662,6 +861,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2ReturnsTwoMostRecentPreviousEventsInGerman(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -685,6 +888,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionInvalidCultureReturnsError(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -699,7 +906,7 @@ public class EventLogMonitorTests
     stdoutput.WriteLine(logOut);
     string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
     Assert.Equal(66, lines.Length); // one extra closing test line is returned
-    // expected warning line
+                                    // expected warning line
     Assert.Equal("Culture is not supported. 'fake' is an invalid culture identifier. Defaulting to 'En-US'.", lines[0].TrimEnd());
     // oldest 2 entries
     Assert.Equal("BIP2001I: ( MGK ) The IBM App Connect Enterprise service has started at version '110011'; process ID 7192. [18/11/2021 18:21:16.344]", lines[1]);
@@ -714,6 +921,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2ReturnsTwoMostRecentPreviousEventsInEnglishWithInvalidCulture(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -738,6 +949,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionPStarReturnsAll64PreviousEvents(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -764,6 +979,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionIndexReturnsSingleEvent(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -787,6 +1006,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionIndexRangeReturnsThreeEventsInclusive(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -800,7 +1023,7 @@ public class EventLogMonitorTests
     stdoutput.WriteLine(logOut);
     string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
     Assert.Equal(7, lines.Length); // one event with one binary line and one extra closing test line is returned
-    //event 1
+                                   //event 1
     Assert.Equal("BIP2011W: ( MGK ) The IBM App Connect Enterprise service has been shutdown, process ID '7108'. [23/12/2021 11:57:04.661]", lines[0].TrimEnd());
     Assert.Equal(@"5812 MGK.service C:\ci\product-build\WMB\src\AdminAgent\BipService\Win32\BipServiceMain.cpp 962 ImbControlService::serviceHandle. Index: 282229", lines[1]);
     //event 2
@@ -818,6 +1041,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionIndexWithOptionP3WithSparseIndexReturnsThreeEventsAfterIndex(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -831,7 +1058,7 @@ public class EventLogMonitorTests
     stdoutput.WriteLine(logOut);
     string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
     Assert.Equal(7, lines.Length); // one event with one binary line and one extra closing test line is returned
-    //event 1
+                                   //event 1
     Assert.Equal("BIP3132I: ( MGK ) The HTTP Listener has started listening on port ''4414'' for ''RestAdmin http'' connections. [18/11/2021 18:21:26.571]", lines[0].TrimEnd());
     Assert.Equal(@"9336 MGK.agent C:\ci\product-build\WMB\src\bipBroker\NodejsLoggingHooks.cpp 113 <JS> ace-admin-server server.js.. Index: 240568", lines[1]);
     //event 2
@@ -848,6 +1075,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionIndexWithSmallIndexAndLargerPValueReturnsCorrectIndexInError(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -861,7 +1092,7 @@ public class EventLogMonitorTests
     stdoutput.WriteLine(logOut);
     string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
     Assert.Single(lines); // one event with one binary line and one extra closing test line is returned
-    // tail
+                          // tail
     Assert.StartsWith("No entries found with matching index 5 in the", lines[0]);
   }
 
@@ -869,6 +1100,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionIndexWithOptionP3ReturnsThreeEventsEitherSideOfTheIndex(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -882,7 +1117,7 @@ public class EventLogMonitorTests
     stdoutput.WriteLine(logOut);
     string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
     Assert.Equal(15, lines.Length); // one event with one binary line and one extra closing test line is returned
-    //event 1
+                                    //event 1
     Assert.Equal("BIP2153I: ( MGK.main ) About to ''Start'' an integration server. [18/11/2021 18:21:38.345]", lines[0].TrimEnd());
     Assert.Equal(@"9976 MGK.main C:\ci\product-build\WMB\src\DataFlowEngine\MessageServices\ImbDataFlowNotifications.cpp 508 ImbDataFlowNotifications::output. Index: 240581", lines[1]);
     //event 2
@@ -911,6 +1146,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionIndexWithOptionPStarReturnsLast8Events(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -938,6 +1177,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void InvalidIndexRangeReturnsError(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -956,6 +1199,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void UsingAnIndexWithOptionSIsAnError(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -974,6 +1221,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void InvalidIndexRangeEndLessThanStartReturnsError(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -992,6 +1243,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void IndexHigherThanHigestEntryInLogIsOKReturnsNoEvents(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1014,6 +1269,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionFilterIncludeReturns5EventsInEnglish(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1039,6 +1298,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionFilterIncludeReturns5EventsInGerman(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1064,6 +1327,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionFilterIncludeReturns4Entries(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1089,6 +1356,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionFilterIncludeAndExcludeReturns2Entries(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1114,6 +1385,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionFilterIncludeAndWarnReturns2Entries(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1139,6 +1414,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionFilterErrorOnlyReturns0Entries(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1174,7 +1453,7 @@ public class EventLogMonitorTests
     stdoutput.WriteLine(logOut);
     string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
     Assert.Equal(2, lines.Length); // one extra closing test line is returned
-    // most recent 2 entries
+                                   // most recent 2 entries
     Assert.Equal(expectedResult, lines[0]);
     Assert.StartsWith("1 Entries shown from the", lines[1]);
   }
@@ -1197,7 +1476,7 @@ public class EventLogMonitorTests
     stdoutput.WriteLine(logOut);
     string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
     Assert.Equal(2, lines.Length); // one extra closing test line is returned
-    // most recent 2 entries
+                                   // most recent 2 entries
     Assert.Equal(expectedResult, lines[0]);
     Assert.StartsWith("1 Entries shown from the", lines[1]);
   }
@@ -1207,7 +1486,7 @@ public class EventLogMonitorTests
   public void MiscSpecificMessages(int testNumber, string culture, string dllLocation, List<string> expectedResult)
   {
     // make sure the EventLogMonitorTestLogSource does not exist in the registry as it will cause 
-    // this test to fail when it's not it's not supposed to work when installed
+    // this test to fail when it's not supposed to work when installed
     if (EventLogSourceExists("Application\\EventLogMonitorTestLogSource"))
     {
       throw new Exception("SETUP ERROR: HKLM\\SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\EventLogMonitorTestLogSource must be disabled before running this test: " + testNumber);
@@ -1287,6 +1566,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionFilterSingleIncludedIDsReturns2Entries(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1313,6 +1596,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionFilterSingleExcludedIDsReturns54Entries(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1341,6 +1628,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionFilterIncludedRangeReturns25Entries(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1367,6 +1658,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionFilterExcludedRangeReturns39Entries(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1405,6 +1700,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionFilterMixedEventIdsReturns22Entries(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+    
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1548,6 +1847,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionDShowsDetailsOfEventLogFile(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1572,6 +1875,10 @@ public class EventLogMonitorTests
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionDShowsDetailsOfEventLogFileVerbose(string ace11SampleEventLogLocation)
   {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
     // replace stdout to capture it
     var output = new StringWriter();
     Console.SetOut(output);
@@ -1736,6 +2043,44 @@ public class EventLogMonitorTests
     // mock an event to raise
     var mockEventRecord = new Mock<EventRecord>();
     mockEventRecord.Setup(x => x.Id).Returns(42);
+    mockEventRecord.Setup(x => x.Level).Returns((int)StandardEventLevel.Verbose); // test verbose output works
+    mockEventRecord.Setup(x => x.LogName).Returns("Application");
+    mockEventRecord.Setup(x => x.ProviderName).Returns("WebSphere Broker");
+    mockEventRecord.Setup(x => x.Properties).Returns(new List<EventProperty>());
+    mockEventRecord.Setup(x => x.TimeCreated).Returns(new DateTime(2000, 1, 1, 12, 0, 0));
+    var mockQuery = new Mock<EventLogQuery>("Application", PathType.LogName);
+    var mockWatch = new Mock<TestEventLogWatcher>(mockQuery.Object);
+
+    string[] monitorArgs = new string[] { "-nt" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(monitorArgs);
+    Assert.True(initialized, $"{initialized} should be true");
+    var args = new Mock<EventLogMonitor.MyEventRecordWrittenEventArgs>();
+    args.Object.EventRecord = mockEventRecord.Object;
+    mockWatch.Object.EventRecordWritten += new EventHandler<EventLogMonitor.MyEventRecordWrittenEventArgs>(monitor.EventLogEventRead);
+    mockWatch.Object.Enabled = true;
+    mockWatch.Raise(e => e.EventRecordWritten += null, this, args.Object);
+
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Single(lines);
+    Assert.Equal("BIP42V: The description for Event ID 42 from source WebSphere Broker cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [01/01/2000 12:00:00.0]", lines[0]);
+  }
+
+  [Fact]
+  public void InvalidLevelForNoneExistantMessageDefaultsToInformationMessage()
+  {
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    // mock an event to raise
+    var mockEventRecord = new Mock<EventRecord>();
+    mockEventRecord.Setup(x => x.Id).Returns(42);
+    mockEventRecord.Setup(x => x.Level).Returns((int)42); // test invalid level works (defaults to Information)
+    mockEventRecord.Setup(x => x.LogName).Returns("Application"); //
+    //mockEventRecord.Setup(x => x.ContainerLog).Returns(ace11SampleEventLogLocaleMetaDataLocation);
     mockEventRecord.Setup(x => x.ProviderName).Returns("WebSphere Broker");
     mockEventRecord.Setup(x => x.Properties).Returns(new List<EventProperty>());
     mockEventRecord.Setup(x => x.TimeCreated).Returns(new DateTime(2000, 1, 1, 12, 0, 0));
@@ -2144,9 +2489,84 @@ public class EventLogMonitorTests
     Assert.StartsWith("4 Entries shown from the", lines[4]);
   }
 
+  [Theory()] // Skip = "Skipped as testing EventLogMonitorTestLogSource"
+  [ClassData(typeof(PatchedTestsSpecificData))]
+  public void PatchOptionReturnsJustInsertsAsEventLogMessage(int testNumber, string dllLocation, List<string> expectedResult, int expectedEventLogMessages)
+  {
+    // make sure the EventLogMonitorTestLogSource does not exist in the registry as it will cause 
+    // this test to fail when it's not supposed to work when installed
+    if (EventLogSourceExists("Application\\EventLogMonitorTestLogSource"))
+    {
+      throw new Exception("SETUP ERROR: HKLM\\SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\EventLogMonitorTestLogSource must be disabled before running this test: " + testNumber);
+    }
+
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+    string extraOptions = "-3"; // -1 is the default output type if not present or overridden with -2 or -3
+
+    string[] args = ["-l", dllLocation, extraOptions];
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+    var expectedResultCount = expectedResult.Count;
+    Assert.Equal(expectedResultCount + 1, lines.Length); // one extra closing test line is returned
+    List<string> results = new(lines[0..^1]);
+
+    stdoutput.WriteLine("\nResults Count and Output: " + results.Count);
+    foreach (string line in results)
+    {
+      stdoutput.WriteLine(line);
+    }
+
+    Assert.Equivalent(expectedResult, results, strict: true);
+    Assert.StartsWith($"{expectedEventLogMessages} Entries shown from the", lines[expectedResultCount]);
+  }
+
+  [Theory()] // Skip = "Skipped as testing EventLogMonitorTestLogSource"
+  [ClassData(typeof(NotPatchedTestsSpecificData))]
+  public void NotPatchOptionReturnsJustInsertsAsEventLogMessage(int testNumber, string dllLocation, List<string> expectedResult, int expectedEventLogMessages)
+  {
+    // make sure the EventLogMonitorTestLogSource does not exist in the registry as it will cause 
+    // this test to fail when it's not supposed to work when installed
+    if (EventLogSourceExists("Application\\EventLogMonitorTestLogSource"))
+    {
+      throw new Exception("SETUP ERROR: HKLM\\SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\EventLogMonitorTestLogSource must be disabled before running this test: " + testNumber);
+    }
+
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    string[] args = ["-nopatch", "-l", dllLocation]; // -nopatch to remove patching default behavious for missing providers
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+    var expectedResultCount = expectedResult.Count;
+    Assert.Equal(expectedResultCount + 1, lines.Length); // one extra closing test line is returned
+    List<string> results = new(lines[0..^1]);
+
+    stdoutput.WriteLine("\nResults Count and Output: " + results.Count);
+    foreach (string line in results)
+    {
+      stdoutput.WriteLine(line);
+    }
+
+    Assert.Equivalent(expectedResult, results, strict: true);
+    Assert.StartsWith($"{expectedEventLogMessages} Entries shown from the", lines[expectedResultCount]);
+  }
+
   static bool EventLogSourceExists(string entry)
   {
-    string? dll = Registry.GetValue("HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\EventLog\\" + entry, "EventMessageFile", null) as string;
+    string? dll = Registry.GetValue(@$"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\EventLog\{entry}", "EventMessageFile", null) as string;
     if (!string.IsNullOrEmpty(dll))
     {
       bool exists = File.Exists(dll);
@@ -2156,6 +2576,32 @@ public class EventLogMonitorTests
       }
     }
     return false;
+  }
+
+  static bool ValidateBrokerRegistryKey()
+  {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // exists it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // This is because FormatMessage API will detect key exists with and invalid DLL and NOT use any MTA file present
+    RegistryKey reg = Registry.LocalMachine;
+    RegistryKey? brokerKey = reg.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\EventLog\Application\IBM App Connect Enterprise v110011", false);
+    if (brokerKey == null)
+    {
+      return true; // not present is valid for our needs
+    }
+
+    string? dll = brokerKey.GetValue("EventMessageFile") as string;
+    if (!string.IsNullOrEmpty(dll))
+    {
+      if (File.Exists(dll))
+      {
+        return true;
+      }
+    }
+
+    // key exists, but dll not found - this will cause errors in the test and needs fixing before running the test.
+    // either delete/rename the key or make the EventMessageFile point to a valid dll
+    throw new Exception(@"SETUP ERROR: 'HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\IBM App Connect Enterprise v110011' must be valid or removed before running this test");
   }
 }
 
@@ -2173,4 +2619,3 @@ public abstract class TestEventLogWatcher : EventLogWatcher
   public TestEventLogWatcher(EventLogQuery a) : base(a) { }
   public abstract new event EventHandler<EventLogMonitor.MyEventRecordWrittenEventArgs> EventRecordWritten;
 }
-

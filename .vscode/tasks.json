@@ -184,6 +184,7 @@
         "-targetdir:\"test/EventLogMonitorTests/coveragereport\"",
         "-historydir:\"test/EventLogMonitorTests/coveragereporthistory\"",
         "-title:EventLogMonitor",
+        "-assemblyfilters:-Moq",
         "-reporttypes:Html"
       ],
       "dependsOn": [
