@@ -343,23 +343,23 @@ public class EventLogMonitorTests
   [
     "2155I [P]: Msg 2155.",
     "Information Event.",
-    "Insert Three. [18/09/2023 16:36:04.420]",
+    "Insert Three. [18/09/2023 15:36:04.420]",
     "3132W [P]: Msg 3132.",
     "Warning Event.",
-    "Insert Three. [18/09/2023 16:36:04.422]",
+    "Insert Three. [18/09/2023 15:36:04.422]",
     "2208E [P]: Msg 2208.",
     "Error Event.",
-    "Insert Three. [18/09/2023 16:36:04.425]",
+    "Insert Three. [18/09/2023 15:36:04.425]",
     "namarie. Index: 874790",
     "1234I [P]: Msg 1234.",
     "Success Event.",
-    "Insert Three. [18/09/2023 16:36:04.425]",
+    "Insert Three. [18/09/2023 15:36:04.425]",
     "1234I [P]: Msg 1234.",
     "Failure Audit.",
-    "Insert Three. [18/09/2023 16:36:04.426]",
+    "Insert Three. [18/09/2023 15:36:04.426]",
     "1234I [P]: Msg 1234.",
     "Success Audit.",
-    "Insert Three. [18/09/2023 16:36:04.428]",
+    "Insert Three. [18/09/2023 15:36:04.428]",
   ];
 
   private static readonly List<string> patchedWithNoBinaryResults =
@@ -433,13 +433,13 @@ public class EventLogMonitorTests
   // Results when entry without a dll is NOT PATCHED
   private static readonly List<string> notPatchedWithBinaryResults =
     [
-      "2155I: The description for Event ID 2155 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.420]",
-      "3132W: The description for Event ID 3132 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.422]",
-      "2208E: The description for Event ID 2208 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.425]",
+      "2155I: The description for Event ID 2155 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 15:36:04.420]",
+      "3132W: The description for Event ID 3132 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 15:36:04.422]",
+      "2208E: The description for Event ID 2208 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 15:36:04.425]",
       "namarie. Index: 874790",
-      "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.425]",
-      "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.426]",
-      "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 16:36:04.428]"
+      "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 15:36:04.425]",
+      "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 15:36:04.426]",
+      "1234I: The description for Event ID 1234 from source EventLogMonitorTestLogSource cannot be found. Either the component that raises this event is not installed on your local computer or the installation is corrupted. You can install or repair the component on the local computer. [18/09/2023 15:36:04.428]"
     ];
 
   private static readonly List<string> notPatchedWithNoBinaryResults =
@@ -2505,7 +2505,7 @@ public class EventLogMonitorTests
     Console.SetOut(output);
     string extraOptions = "-3"; // -1 is the default output type if not present or overridden with -2 or -3
 
-    string[] args = ["-l", dllLocation, extraOptions];
+    string[] args = ["-l", dllLocation, "-utc", extraOptions];
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
@@ -2542,7 +2542,7 @@ public class EventLogMonitorTests
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = ["-nopatch", "-l", dllLocation]; // -nopatch to remove patching default behavious for missing providers
+    string[] args = ["-nopatch", "-l", dllLocation, "-utc"]; // -nopatch to remove patching default behavious for missing providers
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");
