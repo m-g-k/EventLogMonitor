@@ -5,7 +5,7 @@ This tool was originally written around 10 years ago to work with the IBM WebSph
 
 ## Installation
 No real installation is required - simply unzip the download and copy the **EventLogMonitor.exe** application and **EventLogMonitor.pdb** into a folder on your path. There are two versions of the tool to choose from
-* a "smaller" **EventLogMonitor-vX-without-framework.zip** version that requires that you have the [.NET 6 Runtime framework](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) installed as a pre-req.
+* a "smaller" **EventLogMonitor-vX-without-framework.zip** version that requires that you have the [.NET 8 Runtime framework](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) installed as a pre-req.
 * a "larger" **EventLogMonitor-vX-with-framework.zip** version that is self-contained and does not require any pre-reqs.
 
  Simply pick the latest version that matches your environment from the [releases](https://github.com/m-g-k/EventLogMonitor/releases) page on GitHub. The functionality of both versions is the same.
