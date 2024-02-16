@@ -60,7 +60,7 @@ If we now look in the `LocaleMetaData` folder we will see several files containi
 
 ![Event Log message mormat](.././images/ExportLocaleMetaData.png)
 
-The LCID is the numeric identifier representing a particular language such as US English (1033), German (1031) and UK English (2057). [A full list of LCID's](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-lcid/70feba9f-294e-491e-b6eb-56532684c37f) is provided by Microsoft. The latest version at the time of writing was `15.0` published on `06/25/2021` and contains a table of LCIDs starting on page 43. Note that the values in the document are in hex and need to be converted to decimal to match the values used in the file name.
+The LCID is the numeric identifier representing a particular language such as US English (1033), German (1031) and UK English (2057). [A full list of LCID's](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-lcid/70feba9f-294e-491e-b6eb-56532684c37f) is provided by Microsoft. The latest version at the time of writing was `15.0` published on `06/25/2021` and contains a table of LCIDs starting on page 31. Note that the values in the document are in hex and need to be converted to decimal to match the values used in the file name.
 
 ## Export Problems
 
