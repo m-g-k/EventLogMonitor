@@ -87,13 +87,15 @@ In the example above, the machine has three installed languages, UK English (LCI
 ## Fixing Missing Display Errors in the Event Viewer
 
 If you have a missing display message error, you should first check your **Windows Display Language** LCID from a PowerShell terminal by running the `GET-WinSystemLocale` command:
-```
+
+```text
 PS C:\temp> GET-WinSystemLocale
 
 LCID             Name             DisplayName 
 ----             ----             ----------- 
 2057             en-GB            English (United Kingdom)
 ```
+
 Here we can see that UK English (2057) is the default and so **Event Viewer** will expect a `<log-name>_2057.MTA` file to exist. If there is no `<log-name>_<LCID>.MTA` file in your `LocaleMetaData` folder or there is a file that is very small as described above, you have a few options:
 
 * If the missing language was not exported in the first place, and that language exists in the application's message catalog, simply go back to the machine where the export took place and re-export the events with the correct language selected.

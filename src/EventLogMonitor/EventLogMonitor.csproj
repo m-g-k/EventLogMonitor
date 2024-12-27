@@ -5,6 +5,7 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <AssemblyVersion>2.3.0.0</AssemblyVersion>
     <DebugType>embedded</DebugType>
+    <PublishSingleFile>true</PublishSingleFile>
     <LangVersion>12</LangVersion>
     <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>

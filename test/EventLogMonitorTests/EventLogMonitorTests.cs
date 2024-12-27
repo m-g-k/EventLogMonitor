@@ -471,10 +471,10 @@ public class EventLogMonitorTests
 
   class NotPatchedTestsSpecificData : TheoryData<int, string, List<string>, int>
   {
-    private static readonly string iPatchSampleEventLogLocationWithBinary = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-with-extra-binary-data.evtx";
-    private static readonly string iPatchSampleEventLogLocationWithNoBinary = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-no-extra-binary-data.evtx";
-    private static readonly string iPatchSampleEventLogLocationWithOnlyBinaryInsert = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-with-only-binary-data-as-insert.evtx";
-    private static readonly string iPatchSampleEventLogLocationWithNoBinaryOrOtherInserts = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-no-extra-binary-data-or-inserts.evtx";
+    private static readonly string iPatchSampleEventLogLocationWithBinary = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-with-extra-binary-data.evtx"; // both binary and not binary inserts
+    private static readonly string iPatchSampleEventLogLocationWithNoBinary = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-no-extra-binary-data.evtx"; // only inserts that are not binary
+    private static readonly string iPatchSampleEventLogLocationWithOnlyBinaryInsert = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-with-only-binary-data-as-insert.evtx"; // only one insert which is binary
+    private static readonly string iPatchSampleEventLogLocationWithNoBinaryOrOtherInserts = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-no-extra-binary-data-or-inserts.evtx"; // no inserts at all
     private static readonly string iPatchSampleEventLogLocationUniversalPrint = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/UniversalPrint.evtx";
 
     public NotPatchedTestsSpecificData()
@@ -2542,7 +2542,7 @@ public class EventLogMonitorTests
     var output = new StringWriter();
     Console.SetOut(output);
 
-    string[] args = ["-nopatch", "-l", dllLocation, "-utc"]; // -nopatch to remove patching default behavious for missing providers
+    string[] args = ["-nopatch", "-l", dllLocation, "-utc"]; // -nopatch to remove patching default behaviours for missing providers
     EventLogMonitor monitor = new();
     bool initialized = monitor.Initialize(args);
     Assert.True(initialized, $"{initialized} should be true");

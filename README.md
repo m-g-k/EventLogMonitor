@@ -52,6 +52,14 @@ You can choose the log to view by specifying the log name with `-l`. To change f
 
 Of course, you can also combine `-l` with `-s` as you would expect to view a specific source or multiple sources from the chosen log.
 
+The names for the main built-in Windows Event logs are:
+* Application
+* Security
+* Setup
+* System
+
+There are many other built-in Event Logs and of course custom Event Logs can also be added by applications you install. To get a list of the available log names you can look at the **Event Viewer** or you can [Display the available logs](#DisplayAvailableLogs) using EventLogMonitor itself.
+
 ## Viewing previous events in an Event Log
 When starting to tail a log it is often useful to view a few previous entries that have already been written to the log to understand what has already happened before new events start to appear. This also helps to make sure you have spelt your event source name correctly. To do this we use the `-p` option to display previous events along with a count of how many events should be displayed like this:<br>
 
@@ -79,7 +87,7 @@ At this point we can leave the terminal open and wait for more events to appear 
 
 Note that we can choose to display all previous events by using `-p *`.
 
-## Displaying available Event Logs
+## Displaying available Event Logs <a name="DisplayAvailableLogs">
 Another way to use this tool is to see what event logs are registered on the system using the `-d` "display-logs" option to output a list of all registered logs:<br>
 
 `EventLogMonitor.exe -d`<br>

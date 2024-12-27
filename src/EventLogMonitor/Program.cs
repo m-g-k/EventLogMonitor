@@ -913,9 +913,9 @@ public class EventLogMonitor
       // Try one last time to get a patched version of the message
       // where we just get the inserts in a string, assuming patching is allowed.
       // This should work for all events except those that have no inserts or just a single binary insert
-      // but we are not getting a "real" message just whatever inserts were writting to the log
+      // but we are not getting a "real" message just whatever inserts are being written to the log
       // "Universal Print" is an example of this case as it is registered but the .mui file is missing 
-      // on 2 machines tested!
+      // on the machines tested!
       if (string.IsNullOrEmpty(message))
       {
         wrapper ??= new(entry);
