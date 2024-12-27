@@ -584,7 +584,7 @@ public class EventLogMonitorTests
   public void OptionP2ReturnsTwoMostRecentPreviousEventsByDefault1(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -612,7 +612,7 @@ public class EventLogMonitorTests
   public void OptionP2ReturnsTwoMostRecentPreviousEventsByDefault2(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -640,7 +640,7 @@ public class EventLogMonitorTests
   public void OptionP2ReturnsTwoMostRecentPreviousEventsWithMediumOutput(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -672,7 +672,7 @@ public class EventLogMonitorTests
   public void OptionP2ReturnsTwoMostRecentPreviousEventsWithFullOutput(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -706,7 +706,7 @@ public class EventLogMonitorTests
   public void UsingMoreThanOneOutputTypeReturnsAnError(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -723,13 +723,12 @@ public class EventLogMonitorTests
     Assert.StartsWith("Invalid arguments or invalid argument combination: only one of options '-1', '-2' and '-3' may be specified.", logOut);
   }
 
-
   [Theory]
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2WithTFReturnsTwoMostRecentPreviousEventsWithTimestampFirst(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -753,10 +752,38 @@ public class EventLogMonitorTests
 
   [Theory]
   [ClassData(typeof(Ace11SampleEventLogLocationData))]
+  public void OptionP2WithTFReturnsTwoMostRecentPreviousEventsWithTimestampFirstInUTC(string ace11SampleEventLogLocation)
+  {
+    // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
+    ValidateBrokerRegistryKey();
+
+    // replace stdout to capture it
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    string[] args = new string[] { "-p", "2", "-l", ace11SampleEventLogLocation, "-tf", "-utc" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(3, lines.Length); // one extra closing test line is returned
+                                   // most recent 2 entries
+    // Note that UTC is the same as none UTC for these date / times as DST is not in effect
+    Assert.Equal("23/12/2021 11:58:12.195: BIP2269I: ( MGK.main ) Deployed resource ''test'' (uuid=''test'',type=''MessageFlow'') started successfully.", lines[0]);
+    Assert.Equal("23/12/2021 11:58:12.195: BIP2154I: ( MGK.main ) Integration server finished with Configuration message.", lines[1]);
+    Assert.StartsWith("2 Entries shown from the", lines[2]);
+  }
+
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogLocationData))]
   public void OptionP2ReturnsTwoMostRecentPreviousEventsWithBinaryDataAsUnicode(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -788,7 +815,7 @@ public class EventLogMonitorTests
   public void OptionP2ReturnsTwoMostRecentPreviousEventsWithBinaryDataAsHex(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -828,7 +855,7 @@ public class EventLogMonitorTests
   public void OptionP2ReturnsTwoMostRecentPreviousEventsWithExtraVerboseOutput(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -862,7 +889,7 @@ public class EventLogMonitorTests
   public void OptionP2ReturnsTwoMostRecentPreviousEventsInGerman(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -889,7 +916,7 @@ public class EventLogMonitorTests
   public void OptionInvalidCultureReturnsError(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -922,7 +949,7 @@ public class EventLogMonitorTests
   public void OptionP2ReturnsTwoMostRecentPreviousEventsInEnglishWithInvalidCulture(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -950,7 +977,7 @@ public class EventLogMonitorTests
   public void OptionPStarReturnsAll64PreviousEvents(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -980,7 +1007,7 @@ public class EventLogMonitorTests
   public void OptionIndexReturnsSingleEvent(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1007,7 +1034,7 @@ public class EventLogMonitorTests
   public void OptionIndexRangeReturnsThreeEventsInclusive(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1042,7 +1069,7 @@ public class EventLogMonitorTests
   public void OptionIndexWithOptionP3WithSparseIndexReturnsThreeEventsAfterIndex(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1076,7 +1103,7 @@ public class EventLogMonitorTests
   public void OptionIndexWithSmallIndexAndLargerPValueReturnsCorrectIndexInError(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1101,7 +1128,7 @@ public class EventLogMonitorTests
   public void OptionIndexWithOptionP3ReturnsThreeEventsEitherSideOfTheIndex(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1147,7 +1174,7 @@ public class EventLogMonitorTests
   public void OptionIndexWithOptionPStarReturnsLast8Events(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1178,7 +1205,7 @@ public class EventLogMonitorTests
   public void InvalidIndexRangeReturnsError(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1200,7 +1227,7 @@ public class EventLogMonitorTests
   public void UsingAnIndexWithOptionSIsAnError(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1222,7 +1249,7 @@ public class EventLogMonitorTests
   public void InvalidIndexRangeEndLessThanStartReturnsError(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1244,7 +1271,7 @@ public class EventLogMonitorTests
   public void IndexHigherThanHigestEntryInLogIsOKReturnsNoEvents(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1270,7 +1297,7 @@ public class EventLogMonitorTests
   public void OptionFilterIncludeReturns5EventsInEnglish(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1299,7 +1326,7 @@ public class EventLogMonitorTests
   public void OptionFilterIncludeReturns5EventsInGerman(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1328,7 +1355,7 @@ public class EventLogMonitorTests
   public void OptionFilterIncludeReturns4Entries(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1357,7 +1384,7 @@ public class EventLogMonitorTests
   public void OptionFilterIncludeAndExcludeReturns2Entries(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1386,7 +1413,7 @@ public class EventLogMonitorTests
   public void OptionFilterIncludeAndWarnReturns2Entries(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1415,7 +1442,7 @@ public class EventLogMonitorTests
   public void OptionFilterErrorOnlyReturns0Entries(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1567,7 +1594,7 @@ public class EventLogMonitorTests
   public void OptionFilterSingleIncludedIDsReturns2Entries(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1597,7 +1624,7 @@ public class EventLogMonitorTests
   public void OptionFilterSingleExcludedIDsReturns54Entries(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1629,7 +1656,7 @@ public class EventLogMonitorTests
   public void OptionFilterIncludedRangeReturns25Entries(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1659,7 +1686,7 @@ public class EventLogMonitorTests
   public void OptionFilterExcludedRangeReturns39Entries(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1701,7 +1728,7 @@ public class EventLogMonitorTests
   public void OptionFilterMixedEventIdsReturns22Entries(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
     
     // replace stdout to capture it
@@ -1848,7 +1875,7 @@ public class EventLogMonitorTests
   public void OptionDShowsDetailsOfEventLogFile(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -1876,7 +1903,7 @@ public class EventLogMonitorTests
   public void OptionDShowsDetailsOfEventLogFileVerbose(string ace11SampleEventLogLocation)
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // set it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // set it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     ValidateBrokerRegistryKey();
 
     // replace stdout to capture it
@@ -2581,7 +2608,7 @@ public class EventLogMonitorTests
   static bool ValidateBrokerRegistryKey()
   {
     // make sure the "IBM App Connect Enterprise v110011" log source does not exist in the registry or if
-    // exists it must point to a valid DLL. Otherwise this test to fail if key exists without matching DLL.
+    // exists it must point to a valid DLL. Otherwise this test will fail if key exists without matching DLL.
     // This is because FormatMessage API will detect key exists with and invalid DLL and NOT use any MTA file present
     RegistryKey reg = Registry.LocalMachine;
     RegistryKey? brokerKey = reg.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\EventLog\Application\IBM App Connect Enterprise v110011", false);
