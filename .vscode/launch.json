@@ -27,7 +27,7 @@
       //"args": ["-l", "${workspaceFolder}\\test\\EventLogMonitorTests\\SampleEventLogsMisc_Dlls\\misc-LCID-65535-1036-1031-1030-19-0.evtx", "-tf", "-utc"],
       // "args": ["-i", "907046"],
       // "args": ["-i", "210058", "-l", "${workspaceFolder}\\test\\EventLogMonitorTests\\SampleEventLogs_Dlls\\POSH-Log.evtx"],
-     "args": ["-p", "*", "-fe"],
+     "args": ["-p", "1", "-s", "*", "-fn", "1026"],
       // "args": ["-s", "EventLogMonitorTestLogSource", "-p", "6"],
       //"args": ["-l", "Visual Studio", "-b2", "-i", "0"],
       //"args": ["-p", "*", "-l", "${workspaceFolder}\\test\\EventLogMonitorTests\\SampleEventLogs_LocaleMetaData\\Security-Log.evtx", "-fe"],

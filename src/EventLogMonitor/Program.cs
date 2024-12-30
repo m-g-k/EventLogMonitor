@@ -989,7 +989,7 @@ public class EventLogMonitor
       message = message.TrimStart();
       if (iMediumOutput)
       {
-        // description and explanation
+        // description and explanation - so we need to match 2 separater before we cut
         int index = message.IndexOf(iEventLongSeparater);
         if (index > 0)
         {
@@ -1015,11 +1015,12 @@ public class EventLogMonitor
       }
       else
       {
-        //minimal is just description (this is the default)
+        //minimal is just description (this is the default) so we only need to match one separater
         int index = message.IndexOf(iEventLongSeparater);
+        bool cutRequired = false;
         if (index > 0)
         {
-          message = message[0..index];
+          cutRequired = true;
         }
         else
         {
@@ -1027,8 +1028,22 @@ public class EventLogMonitor
           index = message.IndexOf(iEventShortSeparater);
           if (index > 0)
           {
-            message = message[0..index];
+            cutRequired = true;
           }
+          else
+          {
+            // some events only use \n
+            index = message.IndexOf('\n');
+            if (index > 0)
+            {
+             cutRequired = true;
+            }
+          }
+        }
+
+        if (cutRequired)
+        {
+          message = message[0..index];
         }
 
         // for minimal we only want one line if possible, so remove any line breaks left after trimming
