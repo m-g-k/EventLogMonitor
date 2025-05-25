@@ -12,7 +12,7 @@ There are two versions of the tool to choose from:
 
  Simply pick the latest version that matches your environment from the [Releases](https://github.com/m-g-k/EventLogMonitor/releases) page on GitHub. The functionality of both versions is the same.
 
-## Usage <a name="usage"></a>
+## Usage
 There are three different ways to use this tool. The first is to simply query all events from the Application Event Log like this:
 
 ```text
@@ -72,7 +72,7 @@ The names for the main built-in Windows Event logs are:
 * Setup
 * System
 
-There are many other built-in Event Logs and of course custom Event Logs can also be added by applications you install. To get a list of the available log names you can look at the **Event Viewer** or you can [Display the available logs](#DisplayAvailableLogs) using EventLogMonitor itself.
+There are many other built-in Event Logs and of course custom Event Logs can also be added by applications you install. To get a list of the available log names you can look at the **Event Viewer** or you can [Display the available logs](#displaying-available-event-logs) using EventLogMonitor itself.
 
 ## Viewing previous events in an Event Log
 When starting to tail a log it is often useful to view a few previous entries that have already been written to the log to understand what has already happened before new events start to appear. This also helps to make sure you have spelt your event source name correctly. To do this we use the `-p` option to display previous events along with a count of how many events should be displayed like this:
@@ -107,7 +107,7 @@ At this point we can leave the terminal open and wait for more events to appear 
 
 Note that we can choose to display all previous events by using `-p *`.
 
-## Displaying available Event Logs <a name="DisplayAvailableLogs"></a>
+## Displaying available Event Logs
 Another way to use this tool is to see what event logs are registered on the system using the `-d` "display-logs" option to output a list of all registered logs:
 
 ```text
@@ -255,7 +255,7 @@ EventLogMonitor.exe -p * -s <your source> -fx "your text to exclude here"
 
 Note that this filter is applied after any `-2` or `-3` option.
 
-### "Filter on Event ID" <a name="FilterOnEventId"></a>
+### "Filter on Event ID"
 `-fn` will output only those events that match the specified event ID filter. Allowed filters include:
 * inclusive IDs like `55`, `1002`. This will display only events with a matching ID(s).
 * exclusive IDs like `-11`, `-20`. This will display only events that do not match the specified ID(s).
@@ -369,7 +369,7 @@ Count   : 00 01 02 03-04 05 06 07  ASCII         00       04
 Index: 311242
 ```
 
-Both binary options (`-b1` and `-b2`) also output the index value for the event which can be used to view more information about the event, for example by adding the `-3` or `-v` options in conjunction with the `-i` option. See the [Using Event Indexes](#indexes) section below for more details.
+Both binary options (`-b1` and `-b2`) also output the index value for the event which can be used to view more information about the event, for example by adding the `-3` or `-v` options in conjunction with the `-i` option. See the [Using Event Indexes](#using-event-indexes) section below for more details.
 
 All data written by the binary options is coloured in blue for easy identification.
 
@@ -386,7 +386,7 @@ In addition, some extra information will be output if it is present in the event
 * `ProcessId`: The ID of the process that output this event.
 * `ThreadId:` The ID of the thread within the process that output this event.
 * `Version:` The version of the event if the version is greater than zero.
-* `Win32Msg:` Output only in certain cases. See the [Viewing events without message catalogues](#no-catalogue) section for more details.
+* `Win32Msg:` Output only in certain cases. See the [Viewing events without message catalogues](#viewing-events-without-message-catalogues) section for more details.
 
 For example:
 
@@ -398,7 +398,7 @@ Machine: Rivendell. Log: Application. Source: Microsoft-Windows-RestartManager. 
 
 All data written by the `-v` option is coloured in dark grey for easier identification.
 
-## Using event indexes <a name="indexes"></a>
+## Using event indexes
 Yet another way to use this tool is to query specific events by index with the `-i` or index option. This allows you to output events by index rather than by type. Every event written to an event log has an index number that is put into the event when it is written. Events with higher numbers occurred after events with lower numbers and in the normal case are usually consecutive within a given log. The `-i` option on its own will output the single event with that number, assuming one exists. For example:
 
 ```text
@@ -453,7 +453,7 @@ You can use the `-c <culture>` option to change the culture (or language) used t
 
 Note that you may need to use a Unicode font to be able to display certain languages in your terminal.
 
-## Viewing events without message catalogues <a name="no-catalogue"></a>
+## Viewing events without message catalogues
 If the message catalogue for an event cannot be found, or the catalogue does not contain an entry for the event in question, by default a "patched" version of the message is output if the message has inserts. This means that what is written to the console is only the inserts from the event, and each insert is separated by with a new line. So you can tell that an event has been "patched" in this way, the event it written with a `[P]` (for "patched") after the event ID. An example of this would be:
 
 ```text
@@ -587,7 +587,7 @@ and
 EventLogMonitor.exe -s=SPP -p=2
 ```
 
-The `=` form is most useful when providing `exclusive` event ID filters, see [Filter on Event ID](#FilterOnEventId) for an example.
+The `=` form is most useful when providing `exclusive` event ID filters, see [Filter on Event ID](#filter-on-event-id) for an example.
 
 ## IBM events
 If you run the tool without any options at all, you will see that the default is to look for entries from the various names for the **IBM App Connect Enterprise** product:
