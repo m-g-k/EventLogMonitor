@@ -43,7 +43,7 @@ public static class BinaryDataFormatter
       return OutputNoDataError(index);
     }
 
-    // quick and dirty test for ascii only string data or possible binary only data
+    // quick and dirty test for ascii only string data or possible binary only data.
     bool isAscii = true;
     bool isBinary = false;
     foreach (byte x in data)
