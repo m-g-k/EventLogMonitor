@@ -23,7 +23,18 @@ public static class BinaryDataFormatter
 {
   // convertor that throws on errors  
   readonly private static UnicodeEncoding iConvertor = new(false, false, true);
-  readonly private static Char[] iTrimChars = new Char[] { ' ', '\n', '\t', '\r' };
+  readonly private static Char[] iTrimChars = [' ', '\n', '\t', '\r'];
+  readonly private static string[] formatStrings =
+  [
+    "{0:D8}: {1:X2}                      {2}\n", // 1 byte
+    "{0:D8}: {1:X2} {2:X2}                   {3}{4}\n", // 2 bytes
+    "{0:D8}: {1:X2} {2:X2} {3:X2}                {4}{5}{6}\n", // 3 bytes
+    "{0:D8}: {1:X2} {2:X2} {3:X2} {4:x2}             {5}{6}{7}{8}     {9:X2}{10:X2}{11:X2}{12:X2}\n", // 4 bytes
+    "{0:D8}: {1:X2} {2:X2} {3:X2} {4:x2}-{5:x2}          {6}{7}{8}{9}{10}    {11:X2}{12:X2}{13:X2}{14:X2}\n", // 5 bytes
+    "{0:D8}: {1:X2} {2:X2} {3:X2} {4:x2}-{5:x2} {6:x2}       {7}{8}{9}{10}{11}{12}   {13:X2}{14:X2}{15:X2}{16:X2}\n", // 6 bytes
+    "{0:D8}: {1:X2} {2:X2} {3:X2} {4:x2}-{5:x2} {6:x2} {7:x2}    {8}{9}{10}{11}{12}{13}{14}  {15:X2}{16:X2}{17:X2}{18:X2}\n", // 7 bytes
+    "{0:D8}: {1:X2} {2:X2} {3:X2} {4:x2}-{5:x2} {6:x2} {7:x2} {8:x2} {9}{10}{11}{12}{13}{14}{15}{16} {17:X2}{18:X2}{19:X2}{20:X2} {21:X2}{22:X2}{23:X2}{24:X2}\n", // 8 bytes
+  ];
 
   public static bool OutputFormattedBinaryDataAsString(byte[] data, long index)
   {
@@ -92,8 +103,7 @@ public static class BinaryDataFormatter
       return OutputNoDataError(index);
     }
 
-    int counter1;
-    int counter2;
+    int currentOffset = 0; // current offset into data
     int dataSize = data.Length;
     int lineCount = dataSize / 8;
     int lineFraction = dataSize % 8;
@@ -104,160 +114,46 @@ public static class BinaryDataFormatter
             "Count   : 00 01 02 03-04 05 06 07  ASCII         00       04\n", dataSize);
 
     // first print whole lines
-    for (counter1 = 0; counter1 < lineCount; ++counter1)
+    var formatString = formatStrings[7];
+    for (int count = 0; count < lineCount; ++count)
     {
-      counter2 = counter1 * 8;
+      currentOffset = count * 8;
       buffer.AppendFormat(
-        "{0:D8}: {1:X2} {2:X2} {3:X2} {4:x2}-{5:x2} {6:x2} {7:x2} {8:x2} {9}{10}{11}{12}{13}{14}{15}{16} {17:X2}{18:X2}{19:X2}{20:X2} {21:X2}{22:X2}{23:X2}{24:X2}\n",
-        counter2 + 8,
-        data[counter2 + 0],
-        data[counter2 + 1],
-        data[counter2 + 2],
-        data[counter2 + 3],
-        data[counter2 + 4],
-        data[counter2 + 5],
-        data[counter2 + 6],
-        data[counter2 + 7],
-        IsPrintable(data[counter2 + 0]) ? (char)data[counter2 + 0] : '.',
-        IsPrintable(data[counter2 + 1]) ? (char)data[counter2 + 1] : '.',
-        IsPrintable(data[counter2 + 2]) ? (char)data[counter2 + 2] : '.',
-        IsPrintable(data[counter2 + 3]) ? (char)data[counter2 + 3] : '.',
-        IsPrintable(data[counter2 + 4]) ? (char)data[counter2 + 4] : '.',
-        IsPrintable(data[counter2 + 5]) ? (char)data[counter2 + 5] : '.',
-        IsPrintable(data[counter2 + 6]) ? (char)data[counter2 + 6] : '.',
-        IsPrintable(data[counter2 + 7]) ? (char)data[counter2 + 7] : '.',
-        data[counter2 + 3],
-        data[counter2 + 2],
-        data[counter2 + 1],
-        data[counter2 + 0],
-        data[counter2 + 7],
-        data[counter2 + 6],
-        data[counter2 + 5],
-        data[counter2 + 4]);
+        formatString,
+        currentOffset + 8,
+        data[currentOffset + 0],
+        data[currentOffset + 1],
+        data[currentOffset + 2],
+        data[currentOffset + 3],
+        data[currentOffset + 4],
+        data[currentOffset + 5],
+        data[currentOffset + 6],
+        data[currentOffset + 7],
+        GetPrintableChar(data[currentOffset + 0]),
+        GetPrintableChar(data[currentOffset + 1]),
+        GetPrintableChar(data[currentOffset + 2]),
+        GetPrintableChar(data[currentOffset + 3]),
+        GetPrintableChar(data[currentOffset + 4]),
+        GetPrintableChar(data[currentOffset + 5]),
+        GetPrintableChar(data[currentOffset + 6]),
+        GetPrintableChar(data[currentOffset + 7]),
+        data[currentOffset + 3],
+        data[currentOffset + 2],
+        data[currentOffset + 1],
+        data[currentOffset + 0],
+        data[currentOffset + 7],
+        data[currentOffset + 6],
+        data[currentOffset + 5],
+        data[currentOffset + 4]);
     }
 
     // now do any fractions
-    if (lineFraction == 7)
+    if (lineFraction > 0)
     {
-      counter2 = counter1 * 8;
-      buffer.AppendFormat(
-        "{0:D8}: {1:X2} {2:X2} {3:X2} {4:x2}-{5:x2} {6:x2} {7:x2}    {8}{9}{10}{11}{12}{13}{14}  {15:X2}{16:X2}{17:X2}{18:X2}\n",
-        counter2 + 7,
-        data[counter2 + 0],
-        data[counter2 + 1],
-        data[counter2 + 2],
-        data[counter2 + 3],
-        data[counter2 + 4],
-        data[counter2 + 5],
-        data[counter2 + 6],
-        IsPrintable(data[counter2 + 0]) ? (char)data[counter2 + 0] : '.',
-        IsPrintable(data[counter2 + 1]) ? (char)data[counter2 + 1] : '.',
-        IsPrintable(data[counter2 + 2]) ? (char)data[counter2 + 2] : '.',
-        IsPrintable(data[counter2 + 3]) ? (char)data[counter2 + 3] : '.',
-        IsPrintable(data[counter2 + 4]) ? (char)data[counter2 + 4] : '.',
-        IsPrintable(data[counter2 + 5]) ? (char)data[counter2 + 5] : '.',
-        IsPrintable(data[counter2 + 6]) ? (char)data[counter2 + 6] : '.',
-        data[counter2 + 3],
-        data[counter2 + 2],
-        data[counter2 + 1],
-        data[counter2 + 0]);
+      currentOffset = lineCount * 8; // current offset into data
+      OutputFormattedBinaryDataFraction(data, lineFraction, currentOffset, buffer);
     }
-    else if (lineFraction == 6)
-    {
-      counter2 = counter1 * 8;
-      buffer.AppendFormat(
-        "{0:D8}: {1:X2} {2:X2} {3:X2} {4:x2}-{5:x2} {6:x2}       {7}{8}{9}{10}{11}{12}   {13:X2}{14:X2}{15:X2}{16:X2}\n",
-        counter2 + 6,
-        data[counter2 + 0],
-        data[counter2 + 1],
-        data[counter2 + 2],
-        data[counter2 + 3],
-        data[counter2 + 4],
-        data[counter2 + 5],
-        IsPrintable(data[counter2 + 0]) ? (char)data[counter2 + 0] : '.',
-        IsPrintable(data[counter2 + 1]) ? (char)data[counter2 + 1] : '.',
-        IsPrintable(data[counter2 + 2]) ? (char)data[counter2 + 2] : '.',
-        IsPrintable(data[counter2 + 3]) ? (char)data[counter2 + 3] : '.',
-        IsPrintable(data[counter2 + 4]) ? (char)data[counter2 + 4] : '.',
-        IsPrintable(data[counter2 + 5]) ? (char)data[counter2 + 5] : '.',
-        data[counter2 + 3],
-        data[counter2 + 2],
-        data[counter2 + 1],
-        data[counter2 + 0]);
-    }
-    else if (lineFraction == 5)
-    {
-      counter2 = counter1 * 8;
-      buffer.AppendFormat(
-        "{0:D8}: {1:X2} {2:X2} {3:X2} {4:x2}-{5:x2}          {6}{7}{8}{9}{10}    {11:X2}{12:X2}{13:X2}{14:X2}\n",
-        counter2 + 5,
-        data[counter2 + 0],
-        data[counter2 + 1],
-        data[counter2 + 2],
-        data[counter2 + 3],
-        data[counter2 + 4],
-        IsPrintable(data[counter2 + 0]) ? (char)data[counter2 + 0] : '.',
-        IsPrintable(data[counter2 + 1]) ? (char)data[counter2 + 1] : '.',
-        IsPrintable(data[counter2 + 2]) ? (char)data[counter2 + 2] : '.',
-        IsPrintable(data[counter2 + 3]) ? (char)data[counter2 + 3] : '.',
-        IsPrintable(data[counter2 + 4]) ? (char)data[counter2 + 4] : '.',
-        data[counter2 + 3],
-        data[counter2 + 2],
-        data[counter2 + 1],
-        data[counter2 + 0]);
-    }
-    else if (lineFraction == 4)
-    {
-      counter2 = counter1 * 8;
-      buffer.AppendFormat(
-        "{0:D8}: {1:X2} {2:X2} {3:X2} {4:x2}             {5}{6}{7}{8}     {9:X2}{10:X2}{11:X2}{12:X2}\n",
-        counter2 + 4,
-        data[counter2 + 0],
-        data[counter2 + 1],
-        data[counter2 + 2],
-        data[counter2 + 3],
-        IsPrintable(data[counter2 + 0]) ? (char)data[counter2 + 0] : '.',
-        IsPrintable(data[counter2 + 1]) ? (char)data[counter2 + 1] : '.',
-        IsPrintable(data[counter2 + 2]) ? (char)data[counter2 + 2] : '.',
-        IsPrintable(data[counter2 + 3]) ? (char)data[counter2 + 3] : '.',
-        data[counter2 + 3],
-        data[counter2 + 2],
-        data[counter2 + 1],
-        data[counter2 + 0]);
-    }
-    else if (lineFraction == 3)
-    {
-      counter2 = counter1 * 8;
-      buffer.AppendFormat(
-        "{0:D8}: {1:X2} {2:X2} {3:X2}                {4}{5}{6}\n",
-        counter2 + 3,
-        data[counter2 + 0],
-        data[counter2 + 1],
-        data[counter2 + 2],
-        IsPrintable(data[counter2 + 0]) ? (char)data[counter2 + 0] : '.',
-        IsPrintable(data[counter2 + 1]) ? (char)data[counter2 + 1] : '.',
-        IsPrintable(data[counter2 + 2]) ? (char)data[counter2 + 2] : '.');
-    }
-    else if (lineFraction == 2)
-    {
-      counter2 = counter1 * 8;
-      buffer.AppendFormat(
-        "{0:D8}: {1:X2} {2:X2}                   {3}{4}\n",
-        counter2 + 2,
-        data[counter2 + 0],
-        data[counter2 + 1],
-        IsPrintable(data[counter2 + 0]) ? (char)data[counter2 + 0] : '.',
-        IsPrintable(data[counter2 + 1]) ? (char)data[counter2 + 1] : '.');
-    }
-    else if (lineFraction == 1)
-    {
-      counter2 = counter1 * 8;
-      buffer.AppendFormat(
-       "{0:D8}: {1:X2}                      {2}\n",
-        counter2 + 1,
-        data[counter2 + 0],
-        IsPrintable(data[counter2 + 0]) ? (char)data[counter2 + 0] : '.');
-    }
+
     Console.ForegroundColor = ConsoleColor.DarkCyan;
     Console.Write(buffer.ToString());
     Console.Write("Index: " + index + "\n");
@@ -265,10 +161,130 @@ public static class BinaryDataFormatter
     return true;
   }
 
-  private static bool IsPrintable(byte candidate)
+  private static void OutputFormattedBinaryDataFraction(byte[] data, int lineFraction, int currentOffset, StringBuilder buffer)
   {
-    return candidate is not (< 0x20 or > 0x7F);
+    string formatString = formatStrings[lineFraction - 1];
+    switch (lineFraction)
+    {
+      case 7: // 7 bytes to output
+        buffer.AppendFormat(
+          formatString,
+          currentOffset + 7,
+          data[currentOffset + 0], // hex
+          data[currentOffset + 1],
+          data[currentOffset + 2],
+          data[currentOffset + 3],
+          data[currentOffset + 4],
+          data[currentOffset + 5],
+          data[currentOffset + 6],
+          GetPrintableChar(data[currentOffset + 0]), // ascii
+          GetPrintableChar(data[currentOffset + 1]),
+          GetPrintableChar(data[currentOffset + 2]),
+          GetPrintableChar(data[currentOffset + 3]),
+          GetPrintableChar(data[currentOffset + 4]),
+          GetPrintableChar(data[currentOffset + 5]),
+          GetPrintableChar(data[currentOffset + 6]),
+          data[currentOffset + 3], // word
+          data[currentOffset + 2],
+          data[currentOffset + 1],
+          data[currentOffset + 0]);
+        break;
+      case 6: // 6 bytes to output
+        buffer.AppendFormat(
+          formatString,
+          currentOffset + 6,
+          data[currentOffset + 0],
+          data[currentOffset + 1],
+          data[currentOffset + 2],
+          data[currentOffset + 3],
+          data[currentOffset + 4],
+          data[currentOffset + 5],
+          GetPrintableChar(data[currentOffset + 0]),
+          GetPrintableChar(data[currentOffset + 1]),
+          GetPrintableChar(data[currentOffset + 2]),
+          GetPrintableChar(data[currentOffset + 3]),
+          GetPrintableChar(data[currentOffset + 4]),
+          GetPrintableChar(data[currentOffset + 5]),
+          data[currentOffset + 3],
+          data[currentOffset + 2],
+          data[currentOffset + 1],
+          data[currentOffset + 0]);
+        break;
+      case 5: // 5 bytes to output
+        buffer.AppendFormat(
+          formatString,
+          currentOffset + 5,
+          data[currentOffset + 0],
+          data[currentOffset + 1],
+          data[currentOffset + 2],
+          data[currentOffset + 3],
+          data[currentOffset + 4],
+          GetPrintableChar(data[currentOffset + 0]),
+          GetPrintableChar(data[currentOffset + 1]),
+          GetPrintableChar(data[currentOffset + 2]),
+          GetPrintableChar(data[currentOffset + 3]),
+          GetPrintableChar(data[currentOffset + 4]),
+          data[currentOffset + 3],
+          data[currentOffset + 2],
+          data[currentOffset + 1],
+          data[currentOffset + 0]);
+        break;
+      case 4: // 4 bytes to output
+        buffer.AppendFormat(
+          formatString,
+          currentOffset + 4,
+          data[currentOffset + 0],
+          data[currentOffset + 1],
+          data[currentOffset + 2],
+          data[currentOffset + 3],
+          GetPrintableChar(data[currentOffset + 0]),
+          GetPrintableChar(data[currentOffset + 1]),
+          GetPrintableChar(data[currentOffset + 2]),
+          GetPrintableChar(data[currentOffset + 3]),
+          data[currentOffset + 3],
+          data[currentOffset + 2],
+          data[currentOffset + 1],
+          data[currentOffset + 0]);
+        break;
+      case 3: // 3 bytes to output
+        buffer.AppendFormat(
+          formatString,
+          currentOffset + 3,
+          data[currentOffset + 0],
+          data[currentOffset + 1],
+          data[currentOffset + 2],
+          GetPrintableChar(data[currentOffset + 0]),
+          GetPrintableChar(data[currentOffset + 1]),
+          GetPrintableChar(data[currentOffset + 2]));
+        break;
+      case 2: // 2 bytes to output
+        buffer.AppendFormat(
+          formatString,
+          currentOffset + 2,
+          data[currentOffset + 0],
+          data[currentOffset + 1],
+          GetPrintableChar(data[currentOffset + 0]),
+          GetPrintableChar(data[currentOffset + 1]));
+        break;
+      case 1: // 1 byte to output
+        buffer.AppendFormat(
+          formatString,
+          currentOffset + 1,
+          data[currentOffset + 0],
+          GetPrintableChar(data[currentOffset + 0]));
+        break;
+    }
   }
+
+  private static char GetPrintableChar(byte candidate)
+  {
+    return candidate is not (< 0x20 or > 0x7F) ? (char)candidate : '.';
+  }
+
+  // private static bool IsPrintable(byte candidate)
+  // {
+  //  return candidate is not (< 0x20 or > 0x7F);
+  // }
 
   private static bool OutputNoDataError(long index)
   {

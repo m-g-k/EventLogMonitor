@@ -209,7 +209,7 @@ As documented in these rather old Microsoft MMC [guidelines](https://docs.micros
 
 Each of these event types has the same format as shown in this picture taken from the above guidelines:
 
-![Event Log message mormat](./images/EventLogExample.png)
+![Event Log Message Format](./images/EventLogExample.png)
 
 Of this list of six parts, the most frequently used are:
 1. **Message body** (or **Description**).
