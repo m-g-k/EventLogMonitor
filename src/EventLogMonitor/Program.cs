@@ -43,7 +43,7 @@ public class EventLogMonitor
   [DllImport(@"kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
   static extern int LCIDToLocaleName(uint locale, StringBuilder lpName, int cchName, int dwFlags);
 
-  private static readonly bool outputLCID = Environment.GetEnvironmentVariable("EVENTLOGMONITOR_OUTPUT_LCID") != null;
+  private static readonly bool s_OutputLCID = Environment.GetEnvironmentVariable("EVENTLOGMONITOR_OUTPUT_LCID") != null;
   private static volatile int s_entriesDisplayed = 0;
 
   private const int LOCALE_ALLOW_NEUTRAL_NAMES = 0x08000000;
@@ -801,32 +801,7 @@ public class EventLogMonitor
       level = (StandardEventLevel)entry.Level;
     }
 
-    string type;
-    ConsoleColor textColour;
-    if (entry.LogName == "Security")
-    {
-      if (((ulong)entry.Keywords ^ 0x8010000000000000) == 0x0)
-      {
-        type = "F"; textColour = ConsoleColor.Red; // Audit Failure
-      }
-      else
-      {
-        type = "S"; textColour = ConsoleColor.Green; // Audit Success
-      }
-    }
-    else
-    {
-      switch (level)
-      {
-        case StandardEventLevel.Informational: type = "I"; textColour = ConsoleColor.Green; break;
-        case StandardEventLevel.Warning: type = "W"; textColour = ConsoleColor.Yellow; break;
-        case StandardEventLevel.Error: type = "E"; textColour = ConsoleColor.Red; break;
-        case StandardEventLevel.Critical: type = "C"; textColour = ConsoleColor.DarkRed; break;
-        case StandardEventLevel.LogAlways: type = "I"; textColour = ConsoleColor.Green; break;
-        case StandardEventLevel.Verbose: type = "V"; textColour = ConsoleColor.Green; break;
-        default: type = "I"; textColour = ConsoleColor.Green; break;
-      }
-    }
+    ConsoleColor fgTextColour = CalculateOutputTextColour(entry, level, out string idType);
 
     string message = string.Empty;
     string win32Message = string.Empty;
@@ -939,37 +914,8 @@ public class EventLogMonitor
     {
       messagePatched = false; // just in case - can't be patched if we don't have a msg!
 
-      // build our own response message like the event log API does!
-      message = "The description for Event ID " + entry.Id + " from source " + entry.ProviderName + " cannot be found. " +
-      "Either the component that raises this event is not installed on your local computer or the installation is corrupted. " +
-      "You can install or repair the component on the local computer.\r\n\r\n" +
-      "If the event originated on another computer, the display information had to be saved with the event.\r\n\r\n";
-
-      bool first = true;
-      foreach (EventProperty prop in entry.Properties)
-      {
-        if (first)
-        {
-          message += "The following information was included with the event:\r\n";
-          first = false;
-        }
-
-        // byte[] will normally be binary data, not an insert!
-        if (prop.Value.GetType() != typeof(byte[]))
-        {
-          message += prop.Value.ToString();
-        }
-        message += "\r\n";
-      }
-
-      if (win32Message.Length > 0)
-      {
-        message += win32Message;
-      }
-      else
-      {
-        message += "The message resource is present but the message was not found in the message table";
-      }
+      // build a new message that matches the message the EventLog would create in this situation
+      message = CreateMissingMessage(entry, win32Message);
 
       if (entry.Qualifiers == 0)
       {
@@ -981,7 +927,7 @@ public class EventLogMonitor
       }
     }
 
-    // full is everything (description, explanation and user action) and we output it "as is"
+    // A full output message (-3) is everything ("description", "explanation" and "user action") and we output it "as is"
     if (!iFullOutput)
     {
       // for medium and minimal we trim the beginning to make sure we are starting at real text
@@ -989,90 +935,13 @@ public class EventLogMonitor
       message = message.TrimStart();
       if (iMediumOutput)
       {
-        // description and explanation - so we need to match 2 separater before we cut
-        int index = message.IndexOf(iEventLongSeparater);
-        if (index > 0)
-        {
-          index = message.IndexOf(iEventLongSeparater, index + iEventLongSeparater.Length);
-          if (index > 0)
-          {
-            message = message[0..index];
-          }
-        }
-        else
-        {
-          // some events only use \r\n
-          index = message.IndexOf(iEventShortSeparater);
-          if (index > 0)
-          {
-            index = message.IndexOf(iEventShortSeparater, index + iEventShortSeparater.Length);
-            if (index > 0)
-            {
-              message = message[0..index];
-            }
-          }
-        }
+        // A Medium format message (-2) is just the "description" and "explanation" 
+        message = OutputMediumMessage(message);
       }
       else
       {
-        //minimal is just description (this is the default) so we only need to match one separater
-        int index = message.IndexOf(iEventLongSeparater);
-        bool cutRequired = false;
-        if (index > 0)
-        {
-          cutRequired = true;
-        }
-        else
-        {
-          // some events only use \r\n
-          index = message.IndexOf(iEventShortSeparater);
-          if (index > 0)
-          {
-            cutRequired = true;
-          }
-          else
-          {
-            // some events only use \n
-            index = message.IndexOf('\n');
-            if (index > 0)
-            {
-             cutRequired = true;
-            }
-          }
-        }
-
-        if (cutRequired)
-        {
-          message = message[0..index];
-        }
-
-        // for minimal we only want one line if possible, so remove any line breaks left after trimming
-        // and replace with a ' ' space or a ". " if appropriate.
-        message = message.TrimEnd();
-
-        ReadOnlySpan<char> messageSpan = message;
-        // first look for "\r\n"
-        int count = messageSpan.Count(iEventShortSeparater);
-        if (count > 0)
-        {
-          message = EventLogUtils.RemoveChars(message, messageSpan, iEventShortSeparater, count);
-        }
-
-        // next look for any remaining '\n'
-        messageSpan = message;
-        count = messageSpan.Count("\n");
-        if (count > 0)
-        {
-          message = EventLogUtils.RemoveChars(message, messageSpan, "\n", count);
-        }
-
-        // finally look for any remaining '\r'
-        messageSpan = message;
-        count = messageSpan.Count("\r");
-        if (count > 0)
-        {
-          message = EventLogUtils.RemoveChars(message, messageSpan, "\r", count);
-        }
+        // A Minimal format message (-1) is just "description" and this is the default output format
+        message = OutputMinimalMessage(message);
       }
     }
 
@@ -1100,58 +969,31 @@ public class EventLogMonitor
 
     if (iTimestampFirst)
     {
-      Console.ForegroundColor = ConsoleColor.White;
-      if (iTimestampInUTC)
-      {
-        outputTimestampInUTC(entry, true);
-      }
-      else
-      {
-        Console.Write(entry.TimeCreated + "." + entry.TimeCreated.Value.Millisecond + ": ");
-      }
-
-      Console.ResetColor();
+      OutputEntryTimestamp(entry, true);
     }
 
-    Console.ForegroundColor = textColour;
+    Console.ForegroundColor = fgTextColour;
     if (brokerEventLogEntry)
     {
       Console.Write("BIP");
     }
 
-    Console.Write(entry.Id + type);
+    Console.Write(entry.Id + idType);
 
     if (messagePatched)
     {
       Console.ForegroundColor = ConsoleColor.DarkYellow;
       Console.Write(" [P]");
-      Console.ForegroundColor = textColour;
+      Console.ForegroundColor = fgTextColour;
     }
 
     Console.Write(": ");
-
-    bool forceMinBinaryOutput = false;
-    if (level == StandardEventLevel.Error || level == StandardEventLevel.Critical)
-    {
-      // force binary tracing for errors
-      forceMinBinaryOutput = true;
-    }
-
     Console.ResetColor();
     Console.Write(message);
+
     if (!iTimestampFirst)
     {
-      Console.ForegroundColor = ConsoleColor.White;
-      if (iTimestampInUTC)
-      {
-        outputTimestampInUTC(entry, false);
-      }
-      else
-      {
-        Console.Write(" [" + entry.TimeCreated + "." + entry.TimeCreated.Value.Millisecond + "]\n");
-      }
-
-      Console.ResetColor();
+      OutputEntryTimestamp(entry, false);
     }
     else
     {
@@ -1160,71 +1002,275 @@ public class EventLogMonitor
 
     if (iVerboseOutput)
     {
-      EventLogRecord logRecord = (EventLogRecord)entry;
-      Console.ForegroundColor = ConsoleColor.DarkGray;
-      Console.Write("Machine: {0}. Log: {1}. Source: {2}.", logRecord.MachineName, logRecord.ContainerLog, logRecord.ProviderName);
+      OutputVerboseMessageDetails(entry, win32Message, lcidUsed);
+    }
 
-      if (logRecord.UserId != null)
-      {
-        string name = logRecord.UserId.ToString();
-        Console.Write(" User: {0}.", name);
-      }
-
-      if (logRecord.ProcessId != 0)
-      {
-        string procId = logRecord.ProcessId.ToString();
-        Console.Write(" ProcessId: {0}.", procId);
-      }
-
-      if (logRecord.ThreadId != 0)
-      {
-        string tId = logRecord.ThreadId.ToString();
-        Console.Write(" ThreadId: {0}.", tId);
-      }
-
-      if (logRecord.Version != 0)
-      {
-        string ver = logRecord.Version.ToString();
-        Console.Write(" Version: {0}.", ver);
-      }
-
-      if (!string.IsNullOrEmpty(win32Message))
-      {
-        Console.Write(" Win32Msg: {0} ({1}).", win32Message, entry.Id);
-      }
-
-      if (outputLCID && lcidUsed >= 0)
-      {
-        Console.Write(" LCID: {0}.", lcidUsed);
-      }
-
-      Console.WriteLine(); // finish with a blank line
-      Console.ResetColor();
+    bool forceMinBinaryOutput = false;
+    if (level == StandardEventLevel.Error || level == StandardEventLevel.Critical)
+    {
+      // force binary tracing for errors
+      forceMinBinaryOutput = true;
     }
 
     if (iMinBinaryOutput || iFullBinaryOutput || forceMinBinaryOutput)
     {
-      byte[] data = null;
-      int count = entry.Properties.Count;
-      if (count > 0)
-      {
-        data = entry.Properties[count - 1].Value as byte[];
-      }
-      if (iFullBinaryOutput)
-      {
-        BinaryDataFormatter.OutputFormattedBinaryData(data, (long)entry.RecordId);
-      }
-      else
-      {
-        BinaryDataFormatter.OutputFormattedBinaryDataAsString(data, (long)entry.RecordId);
-      }
+      // output hex or string version of a binary message insert
+      OutputBinaryData(entry);
     }
 
     return true;
   }
 
+  private static ConsoleColor CalculateOutputTextColour(EventRecord entry, StandardEventLevel level, out string type)
+  {
+    ConsoleColor textColour;
+    if (entry.LogName == "Security")
+    {
+      if (((ulong)entry.Keywords ^ 0x8010000000000000) == 0x0)
+      {
+        type = "F"; textColour = ConsoleColor.Red; // Audit Failure
+      }
+      else
+      {
+        type = "S"; textColour = ConsoleColor.Green; // Audit Success
+      }
+    }
+    else
+    {
+      switch (level)
+      {
+        case StandardEventLevel.Informational: type = "I"; textColour = ConsoleColor.Green; break;
+        case StandardEventLevel.Warning: type = "W"; textColour = ConsoleColor.Yellow; break;
+        case StandardEventLevel.Error: type = "E"; textColour = ConsoleColor.Red; break;
+        case StandardEventLevel.Critical: type = "C"; textColour = ConsoleColor.DarkRed; break;
+        case StandardEventLevel.LogAlways: type = "I"; textColour = ConsoleColor.Green; break;
+        case StandardEventLevel.Verbose: type = "V"; textColour = ConsoleColor.Green; break;
+        default: type = "I"; textColour = ConsoleColor.Green; break;
+      }
+    }
+    return textColour;
+  }
+
+  private void OutputEntryTimestamp(EventRecord entry, bool first)
+  {
+    Console.ForegroundColor = ConsoleColor.White;
+    if (iTimestampInUTC)
+    {
+      outputTimestampInUTC(entry, first);
+    }
+    else
+    {
+      if (first)
+      {
+        Console.Write(entry.TimeCreated + "." + entry.TimeCreated.Value.Millisecond + ": ");
+      }
+      else
+      {
+        Console.Write(" [" + entry.TimeCreated + "." + entry.TimeCreated.Value.Millisecond + "]\n");
+      }
+    }
+
+    Console.ResetColor();
+  }
+
+  private void OutputBinaryData(EventRecord entry)
+  {
+    // This only outputs the last property which is normally the binary data.
+    // In reality we should check all properties to see if any are byte[] and output all those.
+    // For now this is sufficient for most cases as the last property is usually the binary data.   
+    byte[] data = null;
+    int count = entry.Properties.Count;
+    if (count > 0)
+    {
+      data = entry.Properties[count - 1].Value as byte[];
+    }
+    if (iFullBinaryOutput)
+    {
+      BinaryDataFormatter.OutputFormattedBinaryData(data, (long)entry.RecordId);
+    }
+    else
+    {
+      BinaryDataFormatter.OutputFormattedBinaryDataAsString(data, (long)entry.RecordId);
+    }
+  }
+
+  private static void OutputVerboseMessageDetails(EventRecord entry, string win32Message, int lcidUsed)
+  {
+    // output extra details about the event
+    EventLogRecord logRecord = (EventLogRecord)entry;
+    Console.ForegroundColor = ConsoleColor.DarkGray;
+    Console.Write("Machine: {0}. Log: {1}. Source: {2}.", logRecord.MachineName, logRecord.ContainerLog, logRecord.ProviderName);
+
+    if (logRecord.UserId != null)
+    {
+      string name = logRecord.UserId.ToString();
+      Console.Write(" User: {0}.", name);
+    }
+
+    if (logRecord.ProcessId != 0)
+    {
+      string procId = logRecord.ProcessId.ToString();
+      Console.Write(" ProcessId: {0}.", procId);
+    }
+
+    if (logRecord.ThreadId != 0)
+    {
+      string tId = logRecord.ThreadId.ToString();
+      Console.Write(" ThreadId: {0}.", tId);
+    }
+
+    if (logRecord.Version != 0)
+    {
+      string ver = logRecord.Version.ToString();
+      Console.Write(" Version: {0}.", ver);
+    }
+
+    if (!string.IsNullOrEmpty(win32Message))
+    {
+      Console.Write(" Win32Msg: {0} ({1}).", win32Message, entry.Id);
+    }
+
+    if (s_OutputLCID && lcidUsed >= 0)
+    {
+      Console.Write(" LCID: {0}.", lcidUsed);
+    }
+
+    Console.WriteLine(); // finish with a blank line
+    Console.ResetColor();
+  }
+
+  private static string CreateMissingMessage(EventRecord entry, string win32Message)
+  {
+    // build our own response message like the event log API does!
+    string message = "The description for Event ID " + entry.Id + " from source " + entry.ProviderName + " cannot be found. " +
+    "Either the component that raises this event is not installed on your local computer or the installation is corrupted. " +
+    "You can install or repair the component on the local computer.\r\n\r\n" +
+    "If the event originated on another computer, the display information had to be saved with the event.\r\n\r\n";
+    bool first = true;
+    foreach (EventProperty prop in entry.Properties)
+    {
+      if (first)
+      {
+        message += "The following information was included with the event:\r\n";
+        first = false;
+      }
+
+      // byte[] will normally be binary data, not an insert!
+      if (prop.Value.GetType() != typeof(byte[]))
+      {
+        message += prop.Value.ToString();
+      }
+      message += "\r\n";
+    }
+
+    if (win32Message.Length > 0)
+    {
+      message += win32Message;
+    }
+    else
+    {
+      message += "The message resource is present but the message was not found in the message table";
+    }
+
+    return message;
+  }
+
+  private string OutputMinimalMessage(string message)
+  {
+    // Minimal output is just the "description" (this is the default) so we only need to match one separater
+    int index = message.IndexOf(iEventLongSeparater);
+    bool cutRequired = false;
+    if (index > 0)
+    {
+      cutRequired = true;
+    }
+    else
+    {
+      // some events only use \r\n
+      index = message.IndexOf(iEventShortSeparater);
+      if (index > 0)
+      {
+        cutRequired = true;
+      }
+      else
+      {
+        // some events only use \n
+        index = message.IndexOf('\n');
+        if (index > 0)
+        {
+          cutRequired = true;
+        }
+      }
+    }
+
+    if (cutRequired)
+    {
+      message = message[0..index];
+    }
+
+    // for minimal we only want one line if possible, so remove any line breaks left after trimming
+    // and replace with a ' ' space or a ". " if appropriate.
+    message = message.TrimEnd();
+
+    ReadOnlySpan<char> messageSpan = message;
+    // first look for "\r\n"
+    int count = messageSpan.Count(iEventShortSeparater);
+    if (count > 0)
+    {
+      message = EventLogUtils.RemoveChars(message, messageSpan, iEventShortSeparater, count);
+    }
+
+    // next look for any remaining '\n'
+    messageSpan = message;
+    count = messageSpan.Count("\n");
+    if (count > 0)
+    {
+      message = EventLogUtils.RemoveChars(message, messageSpan, "\n", count);
+    }
+
+    // finally look for any remaining '\r'
+    messageSpan = message;
+    count = messageSpan.Count("\r");
+    if (count > 0)
+    {
+      message = EventLogUtils.RemoveChars(message, messageSpan, "\r", count);
+    }
+
+    return message;
+  }
+
+  private string OutputMediumMessage(string message)
+  {
+    // Output "description" and "explanation" - so we need to match 2 separaters before we cut
+    int index = message.IndexOf(iEventLongSeparater);
+    if (index > 0)
+    {
+      index = message.IndexOf(iEventLongSeparater, index + iEventLongSeparater.Length);
+      if (index > 0)
+      {
+        message = message[0..index];
+      }
+    }
+    else
+    {
+      // some events only use \r\n
+      index = message.IndexOf(iEventShortSeparater);
+      if (index > 0)
+      {
+        index = message.IndexOf(iEventShortSeparater, index + iEventShortSeparater.Length);
+        if (index > 0)
+        {
+          message = message[0..index];
+        }
+      }
+    }
+
+    return message;
+  }
+
   static void Main(string[] args)
   {
+
     // Force output encoding to UTF-8
     Console.OutputEncoding = System.Text.Encoding.UTF8;
 
@@ -1265,6 +1311,7 @@ public class EventLogMonitor
 
   private static bool IsBrokerEntry(string toMatch)
   {
+    // see if the source matches any of the known IBM broker strings
     foreach (string x in iBrokerMatch)
     {
       if (toMatch.Contains(x))
@@ -1479,6 +1526,7 @@ public class EventLogMonitor
     int minorVersion = typeof(EventLogMonitor).Assembly.GetName().Version.Minor;
     return string.Format("{0}.{1}", majorVersion, minorVersion);
   }
+
   public void EventLogEventRead(object sender, EventArgs x1)
   {
     // Make sure there was no error reading the event and get the record from it

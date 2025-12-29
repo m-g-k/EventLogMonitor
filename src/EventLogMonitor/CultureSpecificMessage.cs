@@ -65,7 +65,7 @@ namespace EventLogMonitor
     //  "Universal Print" // Universal Print Management Service (MS) - missing MUI file
     // Note that our check and patch is done very late in the reading flow on purpose so that if
     // a provider were to be registered in a new update of an application it would automatically
-    // be picked up and take precedence of our patch. 
+    // be picked up and take precedence over our patch. 
     public static bool SpecialCaseMissingProviders { get; set; } = true; // can be unset with '-nopatch'
 
     [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, EntryPoint = "FormatMessageW", SetLastError = true, BestFitMapping = true, ExactSpelling = true)]

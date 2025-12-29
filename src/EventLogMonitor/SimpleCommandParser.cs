@@ -46,7 +46,8 @@ public class SimpleArgumentProcessor
           ParseFlagedArgWithEquals(currentArgument);
           currentArgument = "";
         }
-        else if (!(currentFlag.Length == 0))
+        
+        if (!(currentFlag.Length == 0))
         {
           // we have an empty flagged argument (probably boolean)
 

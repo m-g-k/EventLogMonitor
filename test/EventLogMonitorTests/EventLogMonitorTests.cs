@@ -1487,6 +1487,29 @@ public class EventLogMonitorTests
 
   [Theory]
   [ClassData(typeof(Ace11SampleEventLogCultureSpecificData))]
+  public void EventLogWithLocalMetaDataReturnsCorrectCultureSpecificBipPrefixedMessages(int testNumber, string culture, string expectedResult)
+  {
+    // replace stdout to capture it
+    Console.Write(testNumber); // write to force usage
+    var output = new StringWriter();
+    Console.SetOut(output);
+    // a message number prefixed with BIP should be allowed
+    string[] args = new string[] { "-p", "1", "-l", ace11SampleEventLogLocaleMetaDataLocation, "-c", culture, "-fn", "BIP2152" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(2, lines.Length); // one extra closing test line is returned
+                                   // most recent 2 entries
+    Assert.Equal(expectedResult, lines[0]);
+    Assert.StartsWith("1 Entries shown from the", lines[1]);
+  }
+
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogCultureSpecificData))]
   public void EventLogWithDLLsReturnsCorrectCultureSpecificMessages(int testNumber, string culture, string expectedResult)
   {
     // replace stdout to capture it

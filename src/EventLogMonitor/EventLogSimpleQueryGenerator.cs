@@ -36,7 +36,9 @@ public class EventLogSimpleQueryGenerator
   public EventLogSimpleQueryGenerator(string eventIds, int logLevel = -1)
   {
     iLogLevel = logLevel;
-    iRawEventIds = eventIds;
+
+    // allow the user to prefix any message numbers with "bip" which follows IBM ACE naming conventions
+    iRawEventIds = eventIds.Replace("bip", "", StringComparison.CurrentCultureIgnoreCase);
 
     ParseRawEvents();
     ValidateEvents();

@@ -157,6 +157,17 @@ public class EventLogSimpleQueryTests
   }
 
   [Fact]
+  public void SingleBipMessagePrefixedEventIdIncluded()
+  {
+    var queryGenerator = new EventLogSimpleQueryGenerator("BIP42");
+
+    string query = queryGenerator.QueryString;
+    Assert.True(SanityCheckBraces(query));
+
+    Assert.Equal("*[System[((EventID = 42))]]", query);
+  }
+
+  [Fact]
   public void MultipleEventIdIncluded()
   {
     var queryGenerator = new EventLogSimpleQueryGenerator(" 42 , 43 , 44 ");
