@@ -34,12 +34,6 @@ namespace EventLogMonitor;
 
 public class EventLogMonitor
 {
-  [DllImport("Kernel32.dll", CharSet = CharSet.Auto)]
-  static extern ushort SetThreadLocale(ushort langId);
-
-  [DllImport("kernel32.dll")]
-  static extern ushort GetThreadLocale();
-
   [DllImport(@"kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
   static extern int LCIDToLocaleName(uint locale, StringBuilder lpName, int cchName, int dwFlags);
 
@@ -822,16 +816,16 @@ public class EventLogMonitor
         {
           // try again with the thread set to the requested culture - but must reset
           // this will pick up any MTA files
-          ushort origLCID = (ushort)GetThreadLocale();
+          ushort origLCID = EventLogUtils.GetActiveThreadSpecificLocale();
           try
           {
-            SetThreadLocale((ushort)iChosenCultureLCID);
+            EventLogUtils.SetActiveThreadSpecificLocale(iChosenCultureLCID);
             message = entry.FormatDescription();
             lcidUsed = iChosenCultureLCID;
           }
           finally
           {
-            SetThreadLocale(origLCID);
+            EventLogUtils.SetActiveThreadSpecificLocale(origLCID);
           }
         }
         else
@@ -857,7 +851,7 @@ public class EventLogMonitor
         }
         else
         {
-          lcidUsed = GetThreadLocale();
+          lcidUsed = EventLogUtils.GetActiveThreadSpecificLocale();
         }
       }
 
@@ -865,10 +859,10 @@ public class EventLogMonitor
       if (string.IsNullOrEmpty(message))
       {
         // try again with the console default culture instead - but must reset
-        ushort origLCID = (ushort)GetThreadLocale();
+        ushort origLCID = EventLogUtils.GetActiveThreadSpecificLocale();
         try
         {
-          SetThreadLocale((ushort)iUSDefaultCulture.LCID); // force US
+          EventLogUtils.SetActiveThreadSpecificLocale(iUSDefaultCulture.LCID); // force US
           message = entry.FormatDescription();
           if (string.IsNullOrEmpty(message))
           {
@@ -881,7 +875,7 @@ public class EventLogMonitor
         }
         finally
         {
-          SetThreadLocale(origLCID);
+          EventLogUtils.SetActiveThreadSpecificLocale(origLCID);
         }
       }
 

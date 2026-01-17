@@ -110,6 +110,9 @@ public class CultureSpecificMessageTests
     int enUSCulture = 1033;
     string enUSCultureName = "En-US";
 
+    // Force the patching code or this test fails on Windows 11!
+    CultureSpecificMessage.SpecialCaseMissingProviders = true;
+
     // act
     // make sure GetCultureSpecificMessage returns empty string for a missing provider
     var message = CultureSpecificMessage.GetCultureSpecificMessage(mockEventRecord.Object, enUSCulture, enUSCultureName);
@@ -142,6 +145,9 @@ public class CultureSpecificMessageTests
 
     int enUSCulture = 1033;
     string enUSCultureName = "En-US";
+
+    // Force the patching code or this test fails on Windows 11!
+    CultureSpecificMessage.SpecialCaseMissingProviders = true;
 
     // act
 

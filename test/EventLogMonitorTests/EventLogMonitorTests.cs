@@ -41,12 +41,6 @@ public class EventLogMonitorTests
   private static readonly string ace11SampleEventLogLocaleMetaDataLocation = "../../../../../test/EventLogMonitorTests/SampleEventLogs_LocaleMetaData/ACE-11-Log.evtx";
   private static readonly CultureInfo enGBCulture = new("En-GB", true);
 
-  [DllImport("Kernel32.dll", CharSet = CharSet.Auto)]
-  static extern System.UInt16 SetThreadLocale(System.UInt16 langId);
-
-  [DllImport("kernel32.dll")]
-  static extern uint GetThreadLocale();
-
   class Ace11SampleEventLogLocationData : TheoryData<string>
   {
     public Ace11SampleEventLogLocationData()
@@ -110,6 +104,17 @@ public class EventLogMonitorTests
     }
   }
 
+  class Ace11SampleEventLogNeutralCultureSpecificData : TheoryData<int, string, string>
+  {
+    public Ace11SampleEventLogNeutralCultureSpecificData()
+    {
+      // test edge cases as hex LCID
+      Add(1, "0x0000", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 0 is not present in dll or MTA so expect gracefull fall back to en-US
+       // test edge cases as decimal LCID
+      Add(2, "0", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 0 is not present in dll or MTA so expect gracefull fall back to en-US
+    }
+  }
+
   class Ace11SampleEventLogCultureSpecificData : TheoryData<int, string, string>
   {
     public Ace11SampleEventLogCultureSpecificData()
@@ -165,12 +170,10 @@ public class EventLogMonitorTests
       // test missing cases as decimal LCID
       Add(44, "1079", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // ka-GE is not present in dll or MTA so expect gracefull fall back to en-US
       Add(45, "2057", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // en-GB is not present in dll or MTA so expect gracefull fall back to en-US
-      // test edge cases as hex LCID
-      Add(46, "0x0000", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 0 is not present in dll or MTA so expect gracefull fall back to en-US
-      Add(47, "0xFFFF", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 65535 is not present in dll or MTA so expect gracefull fall back to en-US
-      // test edge cases as decimal LCID
-      Add(48, "0", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 0 is not present in dll or MTA so expect gracefull fall back to en-US
-      Add(49, "65535", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 65535 is not present in dll or MTA so expect gracefull fall back to en-US
+      // test edge cases as hex LCID - note test for 0x0000 moved to new test to prevent break on Windows 11
+      Add(46, "0xFFFF", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 65535 is not present in dll or MTA so expect gracefull fall back to en-US
+      // test edge cases as decimal LCID - note test for 0 moved to new test to prevent break on Windows 11
+      Add(47, "65535", "BIP2152I: ( MGK.main ) Configuration message received. [23/12/2021 11:58:11.763]"); // 65535 is not present in dll or MTA so expect gracefull fall back to en-US
     }
   }
 
@@ -408,6 +411,12 @@ public class EventLogMonitorTests
     "mcpmanagementservice.dll. [12/02/2023 13:45:04.387]",
   ];
 
+  private static readonly List<string> win11NotPatchedUniversalPrintResult =
+  [
+    "1I: Device is AAD/Domain Joined. [12/02/2023 13:45:04.385]",
+    "1I: Using cached state. State: Enabled [12/02/2023 13:45:04.387]"
+  ];
+
   class PatchedTestsSpecificData : TheoryData<int, string, List<string>, int>
   {
     private static readonly string iPatchSampleEventLogLocationWithBinary = "../../../../../test/EventLogMonitorTests/SampleEventLogsPatch_EventOnly/misc-with-extra-binary-data.evtx";
@@ -426,7 +435,10 @@ public class EventLogMonitorTests
       // at the time of writing the DLL references an MUI which is not found and this is the crux of this test.
       // The interenet shows this has been the case for a long time, but if MS ever fix it this test will break,
       // and should probably be retired at that point and "Universal Print" removed from the list of special providers.
-      Add(5, iPatchSampleEventLogLocationUniversalPrint, patchedUniversalPrintResults, 2);
+
+      // Currently, this test is still useful, but on Windows 10 and older versions only. 
+      // In Windows 11, the missing .mui file was added and so it would work and the test would fail.
+      Add(5, iPatchSampleEventLogLocationUniversalPrint, EventLogUtils.IsWindows10OrOlder() ? patchedUniversalPrintResults : win11NotPatchedUniversalPrintResult, 2);
     }
   }
 
@@ -483,7 +495,14 @@ public class EventLogMonitorTests
       Add(2, iPatchSampleEventLogLocationWithNoBinary, notPatchedWithNoBinaryResults, 6);
       Add(3, iPatchSampleEventLogLocationWithOnlyBinaryInsert, notPatchedWithOnlyBinaryResults, 1);
       Add(4, iPatchSampleEventLogLocationWithNoBinaryOrOtherInserts, notPatchedWithNoBinaryOrOtherInsertsResults, 1);
-      Add(5, iPatchSampleEventLogLocationUniversalPrint, notPatchedUniversalPrintResults, 2);
+      // Note test 5 expects the "Universal Print" provider to be registered in the registry with a valid DLL, but
+      // at the time of writing the DLL references an MUI which is not found and this is the crux of this test.
+      // The interenet shows this has been the case for a long time, but if MS ever fix it this test will break,
+      // and should probably be retired at that point and "Universal Print" removed from the list of special providers.
+
+      // Currently, this test is still useful, but on Windows 10 and older versions only. 
+      // In Windows 11, the missing .mui file was added and so it would work and the test would fail.
+      Add(5, iPatchSampleEventLogLocationUniversalPrint, EventLogUtils.IsWindows10OrOlder() ? notPatchedUniversalPrintResults : win11NotPatchedUniversalPrintResult, 2);
     }
   }
 
@@ -1486,6 +1505,76 @@ public class EventLogMonitorTests
   }
 
   [Theory]
+  [ClassData(typeof(Ace11SampleEventLogNeutralCultureSpecificData))]
+  public void EventLogWithLocalMetaDataReturnsCorrectNeutralCultureSpecificMessages(int testNumber, string culture, string expectedResult)
+  {
+    // replace stdout to capture it
+    Console.Write(testNumber); // write to force usage
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    string[] args = new string[] { "-p", "1", "-l", ace11SampleEventLogLocaleMetaDataLocation, "-c", culture, "-fn", "2152" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(2, lines.Length); // one extra closing test line is returned
+                                   // most recent 2 entries
+    Assert.Equal(expectedResult, lines[0]);
+    Assert.StartsWith("1 Entries shown from the", lines[1]);
+
+  }
+
+  [Theory()]
+  [ClassData(typeof(Ace11SampleEventLogNeutralCultureSpecificData))]
+  public void EventLogWithLocalMetaDataReturnsCorrectNeutralCultureSpecificBipPrefixedMessages(int testNumber, string culture, string expectedResult)
+  {
+    // replace stdout to capture it
+    Console.Write(testNumber); // write to force usage
+    var output = new StringWriter();
+    Console.SetOut(output);
+    // a message number prefixed with BIP should be allowed
+    string[] args = new string[] { "-p", "1", "-l", ace11SampleEventLogLocaleMetaDataLocation, "-c", culture, "-fn", "BIP2152" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(2, lines.Length); // one extra closing test line is returned
+                                   // most recent 2 entries
+    Assert.Equal(expectedResult, lines[0]);
+    Assert.StartsWith("1 Entries shown from the", lines[1]);
+  }
+
+  [Theory]
+  [ClassData(typeof(Ace11SampleEventLogNeutralCultureSpecificData))]
+  public void EventLogWithDLLsReturnsCorrectNeutralCultureSpecificMessages(int testNumber, string culture, string expectedResult)
+  {
+    // replace stdout to capture it
+    Console.Write(testNumber); // write to force usage
+    var output = new StringWriter();
+    Console.SetOut(output);
+
+    string[] args = new string[] { "-p", "1", "-l", ace11SampleEventLogDLLsLocation, "-c", culture, "-fn", "2152" };
+    EventLogMonitor monitor = new();
+    bool initialized = monitor.Initialize(args);
+    Assert.True(initialized, $"{initialized} should be true");
+    monitor.MonitorEventLog();
+    string logOut = output.ToString();
+    stdoutput.WriteLine(logOut);
+    string[] lines = logOut.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+    Assert.Equal(2, lines.Length); // one extra closing test line is returned
+                                   // most recent 2 entries
+    Assert.Equal(expectedResult, lines[0]);
+    Assert.StartsWith("1 Entries shown from the", lines[1]);
+  }
+
+  [Theory]
   [ClassData(typeof(Ace11SampleEventLogCultureSpecificData))]
   public void EventLogWithLocalMetaDataReturnsCorrectCultureSpecificBipPrefixedMessages(int testNumber, string culture, string expectedResult)
   {
@@ -2454,10 +2543,10 @@ public class EventLogMonitorTests
     // an error which we are looking for in this test. 
     // However, we need to force the thread locale to En-GB for this to happen or on a different locale machine, e,g En-US, this
     // will return the actual message which we don't want here and this test will fail.
-    var currentLocale = GetThreadLocale(); // get to reset
+    var currentLocale = EventLogUtils.GetActiveThreadSpecificLocale(); // get to reset
     try
     {
-      SetThreadLocale((ushort)CultureInfo.CurrentCulture.LCID); // it will be 2057 which is En-GB as set in the constructor
+      EventLogUtils.SetActiveThreadSpecificLocale(CultureInfo.CurrentCulture.LCID); // it will be 2057 which is En-GB as set in the constructor
 
       // replace stdout to capture it
       var output = new StringWriter();
@@ -2481,7 +2570,7 @@ public class EventLogMonitorTests
     }
     finally
     {
-      SetThreadLocale((ushort)currentLocale);
+      EventLogUtils.SetActiveThreadSpecificLocale(currentLocale);
     }
   }
 

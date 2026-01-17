@@ -15,12 +15,24 @@
 */
 
 using System;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace EventLogMonitor;
 
 public class EventLogUtils
 {
+  [DllImport("Kernel32.dll", CharSet = CharSet.Auto)]
+  static extern ushort SetThreadLocale(ushort langId);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern ushort SetThreadUILanguage(ushort langId);
+
+  [DllImport("kernel32.dll")]
+  static extern ushort GetThreadLocale();
+
+  [DllImport("kernel32.dll")]
+  static extern ushort GetThreadUILanguage();
 
   public static string RemoveChars(string source, ReadOnlySpan<char> sourceRange, string separatorToRemove, int countToRemove)
   {
@@ -54,6 +66,46 @@ public class EventLogUtils
       }
     }
     return result.ToString();
+  }
+
+  static public bool IsWindows10OrOlder()
+  {
+    // Ensure we are on Windows
+    if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+    {
+      return false;
+    }
+
+    Version version = Environment.OSVersion.Version;
+
+    // Windows 10: Major=10 and Build < 22000
+    // Windows 11: Major=10 and Build >= 22000
+    return (version.Major < 10) ||
+           (version.Major == 10 && version.Build < 22000);
+  }
+
+  static public void SetActiveThreadSpecificLocale(int langId)
+  {
+    if (IsWindows10OrOlder())
+    {
+      SetThreadLocale((ushort)langId);
+    }
+    else
+    {
+      SetThreadUILanguage((ushort)langId);
+    }
+  }
+
+  static public ushort GetActiveThreadSpecificLocale()
+  {
+    if (IsWindows10OrOlder())
+    {
+      return GetThreadLocale();
+    }
+    else
+    {
+      return GetThreadUILanguage();
+    }
   }
 
 }
